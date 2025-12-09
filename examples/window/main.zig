@@ -21,5 +21,7 @@ pub fn main() !void {
         .init = game.init,
         .update = game.update,
         .exit = game.exit,
+
+        .title = "window"
     });
 }

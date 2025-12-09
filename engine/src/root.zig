@@ -6,13 +6,19 @@ const EngineError = error{
     ExitFailure
 };
 
-pub const Game = struct{
+pub fn run(api: struct{
     init: fn() EngineError !void,
     update: fn(dt: f32) EngineError !void,
     exit: fn() EngineError !void,
-};
 
-pub fn run(api: Game) !void {
+    title: []const u8,
+}) !void {
+    std.debug.print(
+        \\[debug] appinfo
+        \\[debug]   - title: {s}
+        \\
+        , .{ api.title });
+
     try api.init();
     try api.update(1.0/60.0);
     try api.exit();
