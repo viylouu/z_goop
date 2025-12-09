@@ -15,7 +15,7 @@ pub fn run(api: struct{
 }) !void {
     std.debug.print(
         \\[debug] appinfo
-        \\[debug]   - title: {s}
+        \\[debug]   - title: "{s}"
         \\
         , .{ api.title });
 
