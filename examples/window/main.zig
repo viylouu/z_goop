@@ -18,10 +18,12 @@ const game = struct{
 
 pub fn main() !void {
     try zg.run(.{
-        .init = game.init,
+        .init   = game.init,
         .update = game.update,
-        .exit = game.exit,
+        .exit   = game.exit,
 
-        .title = "window"
+        .title  = "window",
+        .width  = 800,
+        .height = 600
     });
 }
