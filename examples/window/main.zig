@@ -1,5 +1,5 @@
 const zg = @import("z_goop");
-
+const zglfw = @import("z_glfw");
 const std = @import("std");
 
 const Game = struct{
@@ -18,6 +18,8 @@ const Game = struct{
 
 pub fn main() !void {
     try zg.run(.{
+        .plat_impl = zglfw.impl,
+
         .init   = Game.init,
         .update = Game.update,
         .exit   = Game.exit,
