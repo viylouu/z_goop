@@ -18,7 +18,7 @@ const Game = struct{
 
 pub fn main() !void {
     try zg.run(.{
-        .plat_impl = zglfw.impl,
+        .plat_impl = &zglfw.impl,
 
         .init   = Game.init,
         .update = Game.update,

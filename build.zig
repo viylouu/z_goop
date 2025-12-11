@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
         });
 
         b_z_glfw.addImport("z_goop", z_goop);
+        b_z_glfw.addIncludePath(.{ .cwd_relative = "backends/plat/glfw/" });
 
     const ex_window = b.addExecutable(.{
         .name = "window",
@@ -34,9 +35,10 @@ pub fn build(b: *std.Build) void {
     };
 
     for (examps) |ex| {
+        ex.*.linkLibC();
+        //ex.*.addIncludePath(.{ .cwd_relative = "." });
         ex.*.root_module.addImport("z_goop", z_goop);
             { ex.*.root_module.addImport("z_glfw", b_z_glfw);
-                ex.*.addIncludePath(b.path("backends/plat/glfw"));
                 ex.*.linkSystemLibrary("glfw");
                 if (builtin.os.tag == .linux) {
                     ex.*.linkSystemLibrary("X11");

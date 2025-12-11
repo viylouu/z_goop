@@ -7,31 +7,36 @@ const c = @cImport({
     //@cInclude("glfw3native.h");
 });
 
-pub const impl: zplat.Impl = .{
-    .make      = Impl.make,
-    .delete    = Impl.delete,
-    .is_closed = Impl.is_closed,
+var back = Impl{ .window = null };
+pub var impl: zplat.Impl = .{
+    .act          = &back,
+    .make_fn      = Impl.make,
+    .delete_fn    = Impl.delete,
+    .is_closed_fn = Impl.is_closed,
 };
 
 const Impl = struct{
-    window: *c.GLFWwindow,
+    window: ?*c.GLFWwindow,
 
-    fn make(self: *Impl) error{
+    const err = error{
         GlfwInitFailure
-    } !void {
+    };
+
+    fn make(self: *zplat.Impl) err !void {
         _ = self;
 
         if (c.glfwInit() != 0)
-            return .GlfwInitFailure;
+            return err.GlfwInitFailure;
     }
 
-    fn delete(self: *Impl) !void {
+    fn delete(self: *zplat.Impl) !void {
         _ = self;
 
         c.glfwTerminate();
     }
 
-    fn is_closed(self: *Impl) !bool {
-        return c.glfwWindowShouldClose(self.window);
+    fn is_closed(self: *zplat.Impl) !bool {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        return c.glfwWindowShouldClose(ts.window.?) != 0;
     }
 };

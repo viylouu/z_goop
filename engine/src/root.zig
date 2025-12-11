@@ -2,7 +2,7 @@ const std = @import("std");
 pub const plat = @import("plat.zig");
 
 pub fn run(api: struct{
-    plat_impl: plat.Impl,
+    plat_impl: *plat.Impl,
 
     init:   fn()        anyerror !void,
     update: fn(dt: f32) anyerror !void,
