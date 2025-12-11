@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -28,14 +29,27 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    ex_window.root_module.addImport("z_goop", z_goop);
-        ex_window.root_module.addImport("z_glfw", b_z_glfw);
-
     const examps = [_]*const *std.Build.Step.Compile{
         &ex_window
     };
 
     for (examps) |ex| {
+        ex.*.root_module.addImport("z_goop", z_goop);
+            { ex.*.root_module.addImport("z_glfw", b_z_glfw);
+                ex.*.addIncludePath(b.path("backends/plat/glfw"));
+                ex.*.linkSystemLibrary("glfw");
+                if (builtin.os.tag == .linux) {
+                    ex.*.linkSystemLibrary("X11");
+                    ex.*.linkSystemLibrary("Xrandr");
+                    ex.*.linkSystemLibrary("Xi");
+                    ex.*.linkSystemLibrary("Xcursor");
+                    ex.*.linkSystemLibrary("Xinerama");
+                    ex.*.linkSystemLibrary("pthread");
+                    ex.*.linkSystemLibrary("dl");
+                    ex.*.linkSystemLibrary("m");
+                }
+            }
+
         b.installArtifact(ex.*);
 
         const run_cmd = b.addRunArtifact(ex.*);
