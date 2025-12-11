@@ -12,7 +12,7 @@ pub fn run(api: struct{
     width:  u32,
     height: u32,
 }) !void {
-    try api.plat_impl.make();
+    try api.plat_impl.make(api.width,api.height, api.title);
 
     try api.init();
 

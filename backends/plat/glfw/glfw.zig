@@ -19,19 +19,28 @@ const Impl = struct{
     window: ?*c.GLFWwindow,
 
     const err = error{
-        GlfwInitFailure
+        GlfwInitFailure,
+        OutOfMemory,
     };
 
-    fn make(self: *zplat.Impl) err !void {
-        _ = self;
+    fn make(self: *zplat.Impl, width: u32, height: u32, title: []const u8) err !void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
 
-        if (c.glfwInit() != 0)
+        if (c.glfwInit() == 0)
             return err.GlfwInitFailure;
+
+        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        defer arena.deinit();
+        const alloc = arena.allocator();
+        const title_c = try std.mem.concatWithSentinel(alloc, u8, &.{title}, 0);
+
+        ts.window = c.glfwCreateWindow(@intCast(width), @intCast(height), title_c, null,null);
     }
 
     fn delete(self: *zplat.Impl) !void {
-        _ = self;
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
 
+        c.glfwDestroyWindow(ts.window);
         c.glfwTerminate();
     }
 
