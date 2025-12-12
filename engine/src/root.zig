@@ -1,8 +1,10 @@
 const std = @import("std");
 pub const plat = @import("plat.zig");
+pub const rend = @import("rend.zig");
 
 pub fn run(api: struct{
     plat_impl: *plat.Impl,
+    rend_impl: *rend.Impl,
 
     init:   fn()        anyerror !void,
     update: fn(dt: f32) anyerror !void,
@@ -13,6 +15,7 @@ pub fn run(api: struct{
     height: u32,
 }) !void {
     try api.plat_impl.make(api.width,api.height, api.title);
+    try api.rend_impl.make(api.plat_impl);
 
     try api.init();
 
@@ -22,5 +25,6 @@ pub fn run(api: struct{
 
     try api.exit();
 
+    try api.rend_impl.delete();
     try api.plat_impl.delete();
 }
