@@ -11,6 +11,8 @@ const c = @cImport({
 var back = Impl{ .trash = undefined };
 pub var impl: zrend.Impl = .{
     .act          = &back,
+    .name         = "gl",
+
     .make_fn      = Impl.make,
     .delete_fn    = Impl.delete,
 };
