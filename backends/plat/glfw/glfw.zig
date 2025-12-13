@@ -7,7 +7,7 @@ const c = @cImport({
     //@cInclude("glfw3native.h");
 });
 
-var back = Impl{ .window = undefined, .width = 0, .height = 0 };
+var back = Impl{ .window = undefined, .width = undefined, .height = undefined };
 pub var impl: zplat.Impl = .{
     .act          = &back,
 

@@ -8,7 +8,7 @@ const c = @cImport({
     @cInclude("GL/glext.h");
 });
 
-var back = Impl{ .trash = 0 };
+var back = Impl{ .trash = undefined };
 pub var impl: zrend.Impl = .{
     .act          = &back,
     .make_fn      = Impl.make,
