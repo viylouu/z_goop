@@ -70,6 +70,8 @@ const Impl = struct{
         c.glfwShowWindow(ts.window);
         c.glfwPollEvents();
         c.glfwSetWindowSize(ts.window, @intCast(width), @intCast(height));
+
+        c.glfwSwapInterval(1);
     }
 
     fn delete(self: *zplat.Impl) !void {
