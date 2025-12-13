@@ -7,7 +7,7 @@ const c = @cImport({
     //@cInclude("glfw3native.h");
 });
 
-var back = Impl{ .window = null, .width = 0, .height = 0 };
+var back = Impl{ .window = undefined, .width = 0, .height = 0 };
 pub var impl: zplat.Impl = .{
     .act          = &back,
 
@@ -22,13 +22,14 @@ pub var impl: zplat.Impl = .{
 };
 
 const Impl = struct{
-    window: ?*c.GLFWwindow,
+    window: *c.GLFWwindow,
 
     width: u32,
     height: u32,
 
     const err = error{
         GlfwInitFailure,
+        GlfwCreateWindowFailure,
         OutOfMemory,
         MissingSymbol,
     };
@@ -42,15 +43,12 @@ const Impl = struct{
         c.glfwWindowHint(c.GLFW_CLIENT_API, c.GLFW_NO_API);
         c.glfwWindowHint(c.GLFW_RESIZABLE, c.GLFW_TRUE);
 
-        // silly c string
-        //var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        //defer arena.deinit();
-        //const alloc = arena.allocator();
-        //const title_c = try std.mem.concatWithSentinel(alloc, u8, &.{title}, 0);
-
         ts.width = width;
         ts.height = height;
-        ts.window = c.glfwCreateWindow(@intCast(width), @intCast(height), title, null,null);
+        const window = c.glfwCreateWindow(@intCast(width), @intCast(height), title, null,null);
+        if (window == null)
+            return err.GlfwCreateWindowFailure;
+        ts.window = window.?;
 
         // undiable fish mode
         c.glfwShowWindow(ts.window);
@@ -67,7 +65,7 @@ const Impl = struct{
 
     fn is_closed(self: *zplat.Impl) !bool {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
-        return c.glfwWindowShouldClose(ts.window.?) != 0;
+        return c.glfwWindowShouldClose(ts.window) != 0;
     }
 
     // specific
