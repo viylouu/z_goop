@@ -16,6 +16,8 @@ pub var impl: zplat.Impl = .{
     .make_fn      = Impl.make,
     .delete_fn    = Impl.delete,
 
+    .get_time_fn  = Impl.get_time,
+
     .is_closed_fn = Impl.is_closed,
     .poll_fn      = Impl.poll,
     .swap_fn      = Impl.swap,
@@ -75,6 +77,11 @@ const Impl = struct{
 
         c.glfwDestroyWindow(ts.window);
         c.glfwTerminate();
+    }
+
+    fn get_time(self: *zplat.Impl) !f32 {
+        _ = self;
+        return @floatCast(c.glfwGetTime());
     }
 
     fn is_closed(self: *zplat.Impl) !bool {
