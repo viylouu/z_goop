@@ -6,6 +6,8 @@ pub const Impl = struct{
     pub fn delete(self: *Impl) anyerror !void { try self.delete_fn(self); }
     
     pub fn is_closed(self: *Impl) anyerror !bool { return try self.is_closed_fn(self); }
+    pub fn poll(self: *Impl) anyerror !void { try self.poll_fn(self); }
+    pub fn swap(self: *Impl) anyerror !void { try self.swap_fn(self); }
 
     pub fn gl_get_fn_addr(self: *Impl, name: [:0]const u8) anyerror !*anyopaque { return try self.gl_get_fn_addr_fn(self, name); }
 
@@ -16,6 +18,8 @@ pub const Impl = struct{
     delete_fn: *const fn(self: *Impl) anyerror !void,
 
     is_closed_fn: *const fn(self: *Impl) anyerror !bool,
+    poll_fn: *const fn(self: *Impl) anyerror !void,
+    swap_fn: *const fn(self: *Impl) anyerror !void,
 
     // specific stuff
 

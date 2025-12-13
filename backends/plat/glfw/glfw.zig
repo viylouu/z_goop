@@ -17,6 +17,8 @@ pub var impl: zplat.Impl = .{
     .delete_fn    = Impl.delete,
 
     .is_closed_fn = Impl.is_closed,
+    .poll_fn      = Impl.poll,
+    .swap_fn      = Impl.swap,
 
     // specific
 
@@ -78,6 +80,16 @@ const Impl = struct{
     fn is_closed(self: *zplat.Impl) !bool {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
         return c.glfwWindowShouldClose(ts.window) != 0;
+    }
+
+    fn poll(self: *zplat.Impl) !void {
+        _ = self;
+        c.glfwPollEvents();
+    }
+
+    fn swap(self: *zplat.Impl) !void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        c.glfwSwapBuffers(ts.window);
     }
 
     // specific

@@ -20,7 +20,11 @@ pub fn run(api: struct{
     try api.init();
 
     while (!try api.plat_impl.is_closed()) {
+        try api.plat_impl.poll();
+
         try api.update(1.0/60.0);
+
+        try api.plat_impl.swap();
     }
 
     try api.exit();
