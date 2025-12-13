@@ -77,6 +77,8 @@ const Impl = struct{
     fn delete(self: *zplat.Impl) !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
 
+        c.glfwPollEvents();
+
         c.glfwDestroyWindow(ts.window);
         c.glfwTerminate();
     }
