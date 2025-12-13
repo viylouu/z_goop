@@ -17,6 +17,8 @@ pub const Impl = struct{
     make_fn:   *const fn(self: *Impl, r_impl: *rend.Impl, width: u32, height: u32, title: [:0]const u8) anyerror !void,
     delete_fn: *const fn(self: *Impl) anyerror !void,
 
+    get_time: *const fn(self: *Impl) anyerror !u32,
+
     is_closed_fn: *const fn(self: *Impl) anyerror !bool,
     poll_fn: *const fn(self: *Impl) anyerror !void,
     swap_fn: *const fn(self: *Impl) anyerror !void,
