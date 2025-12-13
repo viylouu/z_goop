@@ -59,6 +59,9 @@ const Impl = struct{
             return err.GlfwCreateWindowFailure;
         ts.window = window.?;
 
+        if (std.mem.eql(u8, r_impl.name, "gl"))
+            c.glfwMakeContextCurrent(ts.window);
+
         // undiable fish mode
         c.glfwShowWindow(ts.window);
         c.glfwPollEvents();
