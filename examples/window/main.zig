@@ -1,7 +1,8 @@
+const std = @import("std");
+
 const zg = @import("z_goop");
 const zglfw = @import("z_glfw");
 const zgl = @import("z_gl");
-const std = @import("std");
 
 const Game = struct{
     pub fn init() !void {
