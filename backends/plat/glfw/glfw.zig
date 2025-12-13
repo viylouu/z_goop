@@ -77,6 +77,7 @@ const Impl = struct{
     fn delete(self: *zplat.Impl) !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
 
+        // fix for segfault on exit
         c.glfwPollEvents();
 
         c.glfwDestroyWindow(ts.window);
