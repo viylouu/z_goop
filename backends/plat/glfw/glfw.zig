@@ -10,9 +10,15 @@ const c = @cImport({
 var back = Impl{ .window = null };
 pub var impl: zplat.Impl = .{
     .act          = &back,
+
     .make_fn      = Impl.make,
     .delete_fn    = Impl.delete,
+
     .is_closed_fn = Impl.is_closed,
+
+    // specific
+
+    .gl_get_fn_addr_fn = Impl.gl_get_fn_addr,
 };
 
 const Impl = struct{
@@ -21,6 +27,7 @@ const Impl = struct{
     const err = error{
         GlfwInitFailure,
         OutOfMemory,
+        MissingSymbol,
     };
 
     fn make(self: *zplat.Impl, width: u32, height: u32, title: []const u8) err !void {
@@ -47,5 +54,16 @@ const Impl = struct{
     fn is_closed(self: *zplat.Impl) !bool {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
         return c.glfwWindowShouldClose(ts.window.?) != 0;
+    }
+
+    // specific
+
+    fn gl_get_fn_addr(self: *zplat.Impl, name: [:0]const u8) err !*anyopaque {
+        _ = self;
+
+        const ptr = c.glfwGetProcAddress(name);
+        if (ptr == null) return err.MissingSymbol;
+
+        return @ptrCast(@constCast(ptr.?));
     }
 };

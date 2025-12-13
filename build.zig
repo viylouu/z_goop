@@ -12,14 +12,23 @@ pub fn build(b: *std.Build) void {
     });
 
     // backends
-        const b_z_glfw = b.createModule(.{
+    // plat
+        const bplat_z_glfw = b.createModule(.{
             .root_source_file = b.path("backends/plat/glfw/glfw.zig"),
             .target = target,
             .optimize = optimize,
         });
 
-        b_z_glfw.addImport("z_goop", z_goop);
-        b_z_glfw.addIncludePath(.{ .cwd_relative = "backends/plat/glfw/" });
+        bplat_z_glfw.addImport("z_goop", z_goop);
+        bplat_z_glfw.addIncludePath(.{ .cwd_relative = "backends/plat/glfw/" });
+    // rend
+        const brend_z_gl = b.createModule(.{
+            .root_source_file = b.path("backends/rend/gl/gl.zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        brend_z_gl.addImport("z_goop", z_goop);
 
     const ex_window = b.addExecutable(.{
         .name = "window",
@@ -38,7 +47,7 @@ pub fn build(b: *std.Build) void {
         ex.*.linkLibC();
         //ex.*.addIncludePath(.{ .cwd_relative = "." });
         ex.*.root_module.addImport("z_goop", z_goop);
-            { ex.*.root_module.addImport("z_glfw", b_z_glfw);
+            { ex.*.root_module.addImport("z_glfw", bplat_z_glfw);
                 ex.*.linkSystemLibrary("glfw");
                 if (builtin.os.tag == .linux) {
                     ex.*.linkSystemLibrary("X11");
@@ -50,6 +59,8 @@ pub fn build(b: *std.Build) void {
                     ex.*.linkSystemLibrary("dl");
                     ex.*.linkSystemLibrary("m");
                 }
+            } { ex.*.root_module.addImport("z_gl", brend_z_gl);
+                
             }
 
         b.installArtifact(ex.*);

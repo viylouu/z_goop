@@ -7,6 +7,6 @@ pub const Impl = struct{
 
     act: *anyopaque,
 
-    make_fn: fn(self: *Impl, p_impl: *plat.Impl) anyerror !void,
-    delete_fn: fn(self: *Impl) anyerror !void,
+    make_fn: *const fn(self: *Impl, p_impl: *plat.Impl) anyerror !void,
+    delete_fn: *const fn(self: *Impl) anyerror !void,
 };
