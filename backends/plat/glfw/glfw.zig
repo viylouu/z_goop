@@ -8,10 +8,13 @@ const c = @cImport({
     //@cInclude("glfw3native.h");
 });
 
-var back = Impl{ .window = undefined, .width = undefined, .height = undefined };
+var back = Impl{ .window = undefined, };
 pub var impl: zplat.Impl = .{
     .act          = &back,
     .name         = "glfw",
+
+    .width        = undefined,
+    .height       = undefined,
 
     .make_fn      = Impl.make,
     .delete_fn    = Impl.delete,
@@ -30,9 +33,6 @@ pub var impl: zplat.Impl = .{
 const Impl = struct{
     window: *c.GLFWwindow,
 
-    width: u32,
-    height: u32,
-
     const err = error{
         GlfwInitFailure,
         GlfwCreateWindowFailure,
@@ -47,6 +47,7 @@ const Impl = struct{
             return err.GlfwInitFailure;
 
         if (std.mem.eql(u8, r_impl.name, "gl")) {
+            c.glfwWindowHint(c.GLFW_CLIENT_API, c.GLFW_OPENGL_API);
             c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MAJOR, 3);
             c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 3);
             c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
@@ -56,8 +57,8 @@ const Impl = struct{
 
         c.glfwWindowHint(c.GLFW_RESIZABLE, c.GLFW_TRUE);
 
-        ts.width = width;
-        ts.height = height;
+        self.width = width;
+        self.height = height;
         const window = c.glfwCreateWindow(@intCast(width), @intCast(height), title, null,null);
         if (window == null)
             return err.GlfwCreateWindowFailure;
