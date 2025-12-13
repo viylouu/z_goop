@@ -7,7 +7,7 @@ const c = @cImport({
     //@cInclude("glfw3native.h");
 });
 
-var back = Impl{ .window = null };
+var back = Impl{ .window = null, .width = 0, .height = 0 };
 pub var impl: zplat.Impl = .{
     .act          = &back,
 
@@ -24,24 +24,38 @@ pub var impl: zplat.Impl = .{
 const Impl = struct{
     window: ?*c.GLFWwindow,
 
+    width: u32,
+    height: u32,
+
     const err = error{
         GlfwInitFailure,
         OutOfMemory,
         MissingSymbol,
     };
 
-    fn make(self: *zplat.Impl, width: u32, height: u32, title: []const u8) err !void {
+    fn make(self: *zplat.Impl, width: u32, height: u32, title: [:0]const u8) err !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
 
         if (c.glfwInit() == 0)
             return err.GlfwInitFailure;
 
-        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-        defer arena.deinit();
-        const alloc = arena.allocator();
-        const title_c = try std.mem.concatWithSentinel(alloc, u8, &.{title}, 0);
+        c.glfwWindowHint(c.GLFW_CLIENT_API, c.GLFW_NO_API);
+        c.glfwWindowHint(c.GLFW_RESIZABLE, c.GLFW_TRUE);
 
-        ts.window = c.glfwCreateWindow(@intCast(width), @intCast(height), title_c, null,null);
+        // silly c string
+        //var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        //defer arena.deinit();
+        //const alloc = arena.allocator();
+        //const title_c = try std.mem.concatWithSentinel(alloc, u8, &.{title}, 0);
+
+        ts.width = width;
+        ts.height = height;
+        ts.window = c.glfwCreateWindow(@intCast(width), @intCast(height), title, null,null);
+
+        // undiable fish mode
+        c.glfwShowWindow(ts.window);
+        c.glfwPollEvents();
+        c.glfwSetWindowSize(ts.window, @intCast(width), @intCast(height));
     }
 
     fn delete(self: *zplat.Impl) !void {

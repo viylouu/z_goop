@@ -10,7 +10,7 @@ pub fn run(api: struct{
     update: fn(dt: f32) anyerror !void,
     exit:   fn()        anyerror !void,
 
-    title:  []const u8,
+    title:  [:0]const u8,
     width:  u32,
     height: u32,
 }) !void {
