@@ -9,7 +9,7 @@ const c = @cImport({
 });
 
 var back = Impl{ .window = undefined, };
-pub var impl: zplat.Impl = .{
+pub var impl = zplat.Impl{
     .act          = &back,
     .name         = "glfw",
 
@@ -85,12 +85,12 @@ const Impl = struct{
         c.glfwTerminate();
     }
 
-    fn get_time(self: *zplat.Impl) !f32 {
+    fn get_time(self: *zplat.Impl) f32 {
         _ = self;
         return @floatCast(c.glfwGetTime());
     }
 
-    fn is_closed(self: *zplat.Impl) !bool {
+    fn is_closed(self: *zplat.Impl) bool {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
         return c.glfwWindowShouldClose(ts.window) != 0;
     }

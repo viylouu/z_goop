@@ -9,12 +9,14 @@ const c = @cImport({
 });
 
 var back = Impl{ .gl = undefined };
-pub var impl: zrend.Impl = .{
+pub var impl = zrend.Impl{
     .act          = &back,
     .name         = "gl",
 
     .make_fn      = Impl.make,
     .delete_fn    = Impl.delete,
+
+    .clear_fn     = Impl.clear,
 };
 
 const Impl = struct{
@@ -48,5 +50,12 @@ const Impl = struct{
 
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
+    }
+
+    fn clear(self: *zrend.Impl, col: [4]f32) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+
+        ts.gl.clearColor(col[0],col[1],col[2],col[3]);
+        ts.gl.clear(c.GL_COLOR_BUFFER_BIT);
     }
 };

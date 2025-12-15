@@ -2,14 +2,13 @@ const std = @import("std");
 pub const plat = @import("plat.zig");
 pub const rend = @import("rend.zig");
 
-
 pub fn run(api: struct{
     plat_impl: *plat.Impl,
     rend_impl: *rend.Impl,
 
-    init:   fn()        anyerror !void,
-    update: fn(dt: f32) anyerror !void,
-    exit:   fn()        anyerror !void,
+    init:   *const fn()        anyerror !void,
+    update: *const fn(dt: f32) anyerror !void,
+    exit:   *const fn()        anyerror !void,
 
     title:  [:0]const u8,
     width:  u32,
@@ -23,12 +22,12 @@ pub fn run(api: struct{
 
     try api.init();
 
-    var last_time = try ap.get_time();
+    var last_time = ap.get_time();
 
-    while (!try api.plat_impl.is_closed()) {
+    while (!api.plat_impl.is_closed()) {
         try ap.poll();
 
-        const time = try ap.get_time();
+        const time = ap.get_time();
         const delta = time - last_time;
         last_time = time;
 
