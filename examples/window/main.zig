@@ -16,7 +16,7 @@ const Game = struct{
     pub fn update(dt: f32) !void { 
         std.debug.print("update! {d:.2} FPS\n", .{ 1.0/dt });
 
-        r_impl.clear(.{1,0,1,1});
+        r_impl.clear(.{0.2,0.4,0.3,1});
     }
 
     pub fn exit() !void {
