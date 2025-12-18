@@ -117,7 +117,7 @@ const Impl = struct{
         ts.gl.genBuffers(1, &buf.id);
         if (buf.id == 0) return err.BufferCreationFail;
 
-        const targ = switch(desc.type) {
+        const targ: c.GLenum = switch(desc.type) {
                 .vertex, .instance => c.GL_ARRAY_BUFFER,
                 .index             => c.GL_ELEMENT_ARRAY_BUFFER,
                 .uniform           => c.GL_UNIFORM_BUFFER,
