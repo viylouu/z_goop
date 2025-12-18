@@ -34,8 +34,7 @@ const Impl = struct{
 
         ts.gl.viewport(0,0, @intCast(p_impl.width), @intCast(p_impl.height));
     }
-
-    fn delete(self: *zrend.Impl) !void {
+    fn delete(self: *zrend.Impl) void {
         _ = self;
     }
 
@@ -47,7 +46,6 @@ const Impl = struct{
 
         ts.gl.viewport = try loadfn(p_impl, "glViewport", *const fn(i32,i32,i32,i32) callconv(.c) void);
     }
-
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
     }

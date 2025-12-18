@@ -1,17 +1,225 @@
 const std = @import("std");
 const plat = @import("plat.zig");
 
-pub const Impl = struct{
-    pub fn make(self: *Impl, p_impl: *plat.Impl) anyerror !void { try self.make_fn(self, p_impl); }
-    pub fn delete(self: *Impl) anyerror !void { try self.delete_fn(self); }
+pub const Buffer = struct{
+    id: u32,
+    gen: u32,
+    type: BufferType,
+    desc: BufferDesc,
+};
+pub const BufferType = enum{
+    vertex,
+    index,
+    uniform,
+    storage,
+    instance,
+};
+pub const BufferDesc = struct{
+    type: BufferType,
+    size: u32,
+};
 
-    pub fn clear(self: *Impl, col: [4]f32) void { self.clear_fn(self, col); }
+pub const Texture = struct{
+    id: u32,
+    gen: u32,
+    fmt: TextureFormat,
+};
+pub const TextureFormat = enum{
+    RGBA8,
+    RGB8,
+    R8,
+
+    RGBA16F,
+    RGB16F,
+    R16F,
+
+    RGBA32F,
+    RGB32F,
+    R32F,
+
+    DEPTH24,
+    DEPTH32F,
+    DEPTH24_STENCIL8,
+    DEPTH32F_STENCIL8,
+};
+
+pub const VertexLayoutDesc = struct{
+    stride: u32,
+    attrs: []const VertexAttrDesc,
+};
+pub const VertexAttrDesc = struct{
+    location: u8,
+    format: VertexFormat,
+    offset: u32
+};
+
+pub const VertexFormat = enum{
+    // may expand later, prob not
+    Float,
+    Vector2,
+    Vector3,
+    Vector4,
+};
+
+pub const Topology = enum{
+    Points,
+    Lines,
+    LineStrip,
+    Triangles,
+    TriangleStrip,
+    TriangleFan,
+};
+
+pub const CullMode = enum{
+    None,
+    Back,
+    Front,
+};
+pub const FrontFace = enum{
+    CW,
+    CCW,
+};
+
+pub const CompareOp = enum{
+    Less,
+    Greater,
+    Equal,
+    LessEqual,
+    GreaterEqual,
+};
+
+pub const BlendState = struct{
+    src_color: BlendFactor = .one,
+    dst_color: BlendFactor = .zero,
+    color_op: BlendOp = .add,
+    src_alpha: BlendFactor = .one,
+    dst_alpha: BlendFactor = .zero,
+    alpha_op: BlendOp = .add,
+};
+pub const BlendFactor = enum{
+    zero,
+    one,
+    src_color,
+    inv_src_color,
+    dst_color,
+    inv_dst_color,
+    src_alpha,
+    inv_src_alpha,
+    dst_alpha,
+    inv_dst_alpha,
+};
+pub const BlendOp = enum{
+    add,
+    subtract,
+    rev_subtract,
+    min,
+    max,
+};
+
+pub const Pipeline = struct{
+    id: u32,
+    gen: u32,
+    desc: PipelineDesc,
+};
+pub const PipelineDesc = struct{
+    vertex_shader: Shader,
+    fragment_shader: Shader,
+    //...
+    vertex_layout_desc: VertexLayoutDesc,
+
+    topology: Topology = .Triangles,
+
+    cull_mode: CullMode = .None,
+    front_face: FrontFace = .CCW,
+
+    depth_test: bool = false,
+    depth_write: bool = false,
+    depth_compare: CompareOp = .Less,
+
+    blend: ?BlendState = null,
+
+    color_formats: []const TextureFormat,
+    depth_format: ?TextureFormat = null,
+};
+
+pub const Shader = struct{
+    id: u32,
+    gen: u32,
+    desc: ShaderDesc,
+};
+pub const ShaderType = enum{
+    vertex,
+    fragment,
+    // more later
+};
+pub const ShaderDesc = struct{
+    type: ShaderType,
+    source: []const u8,
+};
+
+pub const Impl = struct{
+    pub fn make(self: *Impl, p_impl: *plat.Impl) anyerror !void { 
+        try self.make_fn(self, p_impl); 
+    }
+    pub fn delete(self: *Impl) void { 
+        self.delete_fn(self); 
+    }
+
+    pub fn clear(self: *Impl, col: [4]f32) void { 
+        self.clear_fn(self, col); 
+    }
+
+    pub fn make_buffer(self: *Impl, desc: BufferDesc, data: ?[]const u8) anyerror !Buffer { 
+        return try self.make_buffer_fn(self, desc, data); 
+    }
+    pub fn delete_buffer(self: *Impl, buffer: Buffer) void { 
+        self.delete_buffer_fn(self, buffer); 
+    }
+
+    pub fn make_pipeline(self: *Impl, desc: PipelineDesc) anyerror !Pipeline {
+        return try self.make_pipeline_fn(self, desc);
+    }
+    pub fn delete_pipeline(self: *Impl, pipeline: Pipeline) void {
+        self.delete_pipeline_fn(self, pipeline);
+    }
+
+    pub fn make_shader(self: *Impl, desc: ShaderDesc) anyerror !Shader {
+        return try self.make_shader_fn(self, desc);
+    }
+    pub fn delete_shader(self: *Impl, shader: Shader) void {
+        self.delete_shader_fn(self, shader);
+    }
+
+    pub fn bind_pipeline(self: *Impl, pipeline: Pipeline) void {
+        self.bind_pipeline_fn(self, pipeline);
+    }
+    pub fn bind_buffer(self: *Impl, buffer: Buffer, slot: u32) void {
+        self.bind_buffer_fn(self, buffer, slot);
+    }
+
+    pub fn draw(self: *Impl, vertices: u32) void {
+        self.draw_fn(self, vertices);
+    }
 
     act: *anyopaque,
     name: []const u8,
 
     make_fn: *const fn(self: *Impl, p_impl: *plat.Impl) anyerror !void,
-    delete_fn: *const fn(self: *Impl) anyerror !void,
+    delete_fn: *const fn(self: *Impl) void,
 
     clear_fn: *const fn(self: *Impl, col: [4]f32) void,
+
+    make_buffer_fn: *const fn(self: *Impl, desc: BufferDesc, data: ?[]const u8) anyerror !Buffer,
+    delete_buffer_fn: *const fn(self: *Impl, buffer: Buffer) void,
+
+    make_pipeline_fn: *const fn(self: *Impl, desc: PipelineDesc) anyerror !Pipeline,
+    delete_pipeline_fn: *const fn(self: *Impl, pipeline: Pipeline) void,
+
+    make_shader_fn: *const fn(self: *Impl, desc: ShaderDesc) anyerror !Shader,
+    delete_shader_fn: *const fn(self: *Impl, shader: Shader) void,
+
+    bind_pipeline_fn: *const fn(self: *Impl, pipeline: Pipeline) void,
+    bind_buffer_fn: *const fn(self: *Impl, buffer: Buffer, slot: u32) void,
+
+    draw_fn: *const fn(self: *Impl, vertices: u32) void,
 };

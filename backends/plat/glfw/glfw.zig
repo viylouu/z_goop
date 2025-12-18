@@ -74,8 +74,7 @@ const Impl = struct{
 
         c.glfwSwapInterval(1);
     }
-
-    fn delete(self: *zplat.Impl) !void {
+    fn delete(self: *zplat.Impl) void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
 
         // fix for segfault on exit
@@ -99,7 +98,6 @@ const Impl = struct{
         _ = self;
         c.glfwPollEvents();
     }
-
     fn swap(self: *zplat.Impl) !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
         c.glfwSwapBuffers(ts.window);
