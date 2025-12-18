@@ -110,7 +110,7 @@ const Impl = struct{
 
     fn make_buffer(self: *zrend.Impl, desc: zrend.BufferDesc, data: ?[]const u8) !zrend.Buffer {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
-        var buf = zrend.Buffer{ .id = 0, .gen = 0, .desc = desc };
+        var buf = zrend.Buffer{ .id = 0, .desc = desc };
 
         if (desc.size == 0) return err.InvalidBufferSize;
         
