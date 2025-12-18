@@ -3,8 +3,6 @@ const plat = @import("plat.zig");
 
 pub const Buffer = struct{
     id: u32,
-    gen: u32,
-    type: BufferType,
     desc: BufferDesc,
 };
 pub const BufferType = enum{
@@ -21,7 +19,6 @@ pub const BufferDesc = struct{
 
 pub const Texture = struct{
     id: u32,
-    gen: u32,
     fmt: TextureFormat,
 };
 pub const TextureFormat = enum{
@@ -118,7 +115,6 @@ pub const BlendOp = enum{
 
 pub const Pipeline = struct{
     id: u32,
-    gen: u32,
     desc: PipelineDesc,
 };
 pub const PipelineDesc = struct{
@@ -144,7 +140,6 @@ pub const PipelineDesc = struct{
 
 pub const Shader = struct{
     id: u32,
-    gen: u32,
     desc: ShaderDesc,
 };
 pub const ShaderType = enum{
@@ -172,21 +167,21 @@ pub const Impl = struct{
     pub fn make_buffer(self: *Impl, desc: BufferDesc, data: ?[]const u8) anyerror !Buffer { 
         return try self.make_buffer_fn(self, desc, data); 
     }
-    pub fn delete_buffer(self: *Impl, buffer: Buffer) void { 
+    pub fn delete_buffer(self: *Impl, buffer: *Buffer) void { 
         self.delete_buffer_fn(self, buffer); 
     }
 
     pub fn make_pipeline(self: *Impl, desc: PipelineDesc) anyerror !Pipeline {
         return try self.make_pipeline_fn(self, desc);
     }
-    pub fn delete_pipeline(self: *Impl, pipeline: Pipeline) void {
+    pub fn delete_pipeline(self: *Impl, pipeline: *Pipeline) void {
         self.delete_pipeline_fn(self, pipeline);
     }
 
     pub fn make_shader(self: *Impl, desc: ShaderDesc) anyerror !Shader {
         return try self.make_shader_fn(self, desc);
     }
-    pub fn delete_shader(self: *Impl, shader: Shader) void {
+    pub fn delete_shader(self: *Impl, shader: *Shader) void {
         self.delete_shader_fn(self, shader);
     }
 
@@ -210,13 +205,13 @@ pub const Impl = struct{
     clear_fn: *const fn(self: *Impl, col: [4]f32) void,
 
     make_buffer_fn: *const fn(self: *Impl, desc: BufferDesc, data: ?[]const u8) anyerror !Buffer,
-    delete_buffer_fn: *const fn(self: *Impl, buffer: Buffer) void,
+    delete_buffer_fn: *const fn(self: *Impl, buffer: *Buffer) void,
 
     make_pipeline_fn: *const fn(self: *Impl, desc: PipelineDesc) anyerror !Pipeline,
-    delete_pipeline_fn: *const fn(self: *Impl, pipeline: Pipeline) void,
+    delete_pipeline_fn: *const fn(self: *Impl, pipeline: *Pipeline) void,
 
     make_shader_fn: *const fn(self: *Impl, desc: ShaderDesc) anyerror !Shader,
-    delete_shader_fn: *const fn(self: *Impl, shader: Shader) void,
+    delete_shader_fn: *const fn(self: *Impl, shader: *Shader) void,
 
     bind_pipeline_fn: *const fn(self: *Impl, pipeline: Pipeline) void,
     bind_buffer_fn: *const fn(self: *Impl, buffer: Buffer, slot: u32) void,

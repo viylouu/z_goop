@@ -10,22 +10,67 @@ const c = @cImport({
 
 var back = Impl{ .gl = undefined };
 pub var impl = zrend.Impl{
-    .act          = &back,
-    .name         = "gl",
+    .act              = &back,
+    .name             = "gl",
 
-    .make_fn      = Impl.make,
-    .delete_fn    = Impl.delete,
+    .make_fn          = Impl.make,
+    .delete_fn        = Impl.delete,
 
-    .clear_fn     = Impl.clear,
+    .clear_fn         = Impl.clear,
+
+    .make_buffer_fn   = Impl.make_buffer,
+    .delete_buffer_fn = Impl.delete_buffer,
+};
+
+pub const err = error{
+    InvalidBufferSize,
+    BufferCreationFail,
+    CantDeleteNullBuffer,
 };
 
 const Impl = struct{
     gl: gl_t,
     const gl_t = struct{
-        clear: *const fn (mask: u32) callconv(.c) void,
-        clearColor: *const fn (r: f32, g: f32, b: f32, a: f32) callconv(.c) void,
+        clear:      *const fn (
+            mask: c.GLbitfield
+            ) callconv(.c) void,
+        clearColor: *const fn (
+            r: c.GLfloat, 
+            g: c.GLfloat, 
+            b: c.GLfloat, 
+            a: c.GLfloat
+            ) callconv(.c) void,
 
-        viewport: *const fn (x: i32, y: i32, w: i32, h: i32) callconv(.c) void,
+        viewport: *const fn (
+            x: c.GLint, 
+            y: c.GLint, 
+            w: c.GLint, 
+            h: c.GLint
+            ) callconv(.c) void,
+
+        genBuffers:     *const fn (
+            n:    c.GLsizei, 
+            bufs: *c.GLuint
+            ) callconv(.c) void,
+        deleteBuffers:  *const fn (
+            n:    c.GLsizei, 
+            bufs: *const c.GLuint
+            ) callconv(.c) void,
+        bindBuffer:     *const fn (
+            target: c.GLenum, 
+            buffer: c.GLuint
+            ) callconv(.c) void,
+        bufferData:     *const fn (
+            target: c.GLenum,
+            size:   c.GLsizeiptr,
+            data:   ?*const anyopaque,
+            usage:  c.GLenum,
+            ) callconv(.c) void,
+        bindBufferBase: *const fn (
+            target: c.GLenum,
+            index:  c.GLuint,
+            buffer: c.GLuint,
+            ) callconv(.c) void,
     };
 
     fn make(self: *zrend.Impl, p_impl: *zplat.Impl) !void {
@@ -41,10 +86,16 @@ const Impl = struct{
     fn load(self: *zrend.Impl, p_impl: *zplat.Impl) !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
 
-        ts.gl.clear = try loadfn(p_impl, "glClear", *const fn (u32) callconv(.c) void);
-        ts.gl.clearColor = try loadfn(p_impl, "glClearColor", *const fn (f32,f32,f32,f32) callconv(.c) void);
+        ts.gl.clear      = try loadfn(p_impl, "glClear",      @TypeOf(ts.gl.clear));
+        ts.gl.clearColor = try loadfn(p_impl, "glClearColor", @TypeOf(ts.gl.clearColor));
 
-        ts.gl.viewport = try loadfn(p_impl, "glViewport", *const fn(i32,i32,i32,i32) callconv(.c) void);
+        ts.gl.viewport = try loadfn(p_impl, "glViewport", @TypeOf(ts.gl.viewport));
+
+        ts.gl.genBuffers     = try loadfn(p_impl, "glGenBuffers",     @TypeOf(ts.gl.genBuffers));
+        ts.gl.deleteBuffers  = try loadfn(p_impl, "glDeleteBuffers",  @TypeOf(ts.gl.deleteBuffers));
+        ts.gl.bindBuffer     = try loadfn(p_impl, "glBindBuffer",     @TypeOf(ts.gl.bindBuffer));
+        ts.gl.bufferData     = try loadfn(p_impl, "glBufferData",     @TypeOf(ts.gl.bufferData));
+        ts.gl.bindBufferBase = try loadfn(p_impl, "glBindBufferBase", @TypeOf(ts.gl.bindBufferBase));
     }
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
@@ -55,5 +106,42 @@ const Impl = struct{
 
         ts.gl.clearColor(col[0],col[1],col[2],col[3]);
         ts.gl.clear(c.GL_COLOR_BUFFER_BIT);
+    }
+
+    fn make_buffer(self: *zrend.Impl, desc: zrend.BufferDesc, data: ?[]const u8) !zrend.Buffer {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        var buf = zrend.Buffer{ .id = 0, .gen = 0, .desc = desc };
+
+        if (desc.size == 0) return err.InvalidBufferSize;
+        
+        ts.gl.genBuffers(1, &buf.id);
+        if (buf.id == 0) return err.BufferCreationFail;
+
+        const targ = switch(desc.type) {
+                .vertex, .instance => c.GL_ARRAY_BUFFER,
+                .index             => c.GL_ELEMENT_ARRAY_BUFFER,
+                .uniform           => c.GL_UNIFORM_BUFFER,
+                .storage           => c.GL_SHADER_STORAGE_BUFFER,
+                else => unreachable,
+            };
+
+        ts.gl.bindBuffer(targ, buf.id);
+        ts.gl.bufferData(
+            targ,
+            desc.size,
+            if (data) |d| d.ptr else null,
+            c.GL_DYNAMIC_DRAW,
+            );
+        ts.gl.bindBuffer(targ, 0);
+
+        return buf;
+    }
+    fn delete_buffer(self: *zrend.Impl, buffer: *zrend.Buffer) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+
+        std.debug.assert(buffer.id != 0);
+
+        ts.gl.deleteBuffers(1, &buffer.id);
+        buffer.id = 0;
     }
 };
