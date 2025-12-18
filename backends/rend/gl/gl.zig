@@ -122,7 +122,6 @@ const Impl = struct{
                 .index             => c.GL_ELEMENT_ARRAY_BUFFER,
                 .uniform           => c.GL_UNIFORM_BUFFER,
                 .storage           => c.GL_SHADER_STORAGE_BUFFER,
-                else => unreachable,
             };
 
         ts.gl.bindBuffer(targ, buf.id);
