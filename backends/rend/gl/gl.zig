@@ -16,6 +16,8 @@ pub var impl = zrend.Impl{
     .make_fn            = Impl.make,
     .delete_fn          = Impl.delete,
 
+    .resize_fn          = Impl.resize,
+
     .clear_fn           = Impl.clear,
 
     .make_buffer_fn     = Impl.make_buffer,
@@ -222,11 +224,15 @@ const Impl = struct{
         ts.gl.viewport(0,0, @intCast(p_impl.width), @intCast(p_impl.height));
 
         ts.gl.genVertexArrays(1, @ptrCast(&ts.dummy_vao));
-        ts.gl.bindVertexArray(ts.dummy_vao);
     }
     fn delete(self: *zrend.Impl) void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
         ts.gl.deleteVertexArrays(1, @ptrCast(&ts.dummy_vao));
+    }
+
+    fn resize(self: *zrend.Impl, width: i32, height: i32) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        ts.gl.viewport(0,0, @intCast(width), @intCast(height));
     }
 
     fn load(self: *zrend.Impl, p_impl: *zplat.Impl) !void {
@@ -274,7 +280,7 @@ const Impl = struct{
         ts.gl.vertexAttribPointer     = try loadfn(p_impl, "glVertexAttribPointer",     @TypeOf(ts.gl.vertexAttribPointer));
         ts.gl.vertexAttribDivisor     = try loadfn(p_impl, "glVertexAttribDivisor",     @TypeOf(ts.gl.vertexAttribDivisor));
 
-        ts.gl.drawArraysInstanced   = try loadfn(p_impl, "glDrawAraysInstanced",    @TypeOf(ts.gl.drawArraysInstanced));
+        ts.gl.drawArraysInstanced   = try loadfn(p_impl, "glDrawArraysInstanced",    @TypeOf(ts.gl.drawArraysInstanced));
         ts.gl.drawElementsInstanced = try loadfn(p_impl, "glDrawElementsInstanced", @TypeOf(ts.gl.drawElementsInstanced));
     
         ts.gl.genVertexArrays    = try loadfn(p_impl, "glGenVertexArrays",    @TypeOf(ts.gl.genVertexArrays));
@@ -568,6 +574,8 @@ const Impl = struct{
         if (instance_count == 0) return;
 
         const top = me_to_gl_topology(ts.cur_pipe.desc.topology);
+
+        ts.gl.bindVertexArray(ts.dummy_vao);
 
         if (ts.cur_index_buf) |ib| {
             ts.gl.drawElementsInstanced(

@@ -19,6 +19,8 @@ pub var impl = zplat.Impl{
     .make_fn      = Impl.make,
     .delete_fn    = Impl.delete,
 
+    .get_size_fn  = Impl.get_size,
+
     .get_time_fn  = Impl.get_time,
 
     .is_closed_fn = Impl.is_closed,
@@ -82,6 +84,11 @@ const Impl = struct{
 
         c.glfwDestroyWindow(ts.window);
         c.glfwTerminate();
+    }
+
+    fn get_size(self: *zplat.Impl, width: *i32, height: *i32) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        c.glfwGetWindowSize(ts.window, @ptrCast(width), @ptrCast(height));
     }
 
     fn get_time(self: *zplat.Impl) f32 {
