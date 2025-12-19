@@ -29,8 +29,7 @@ pub const err = error{
 };
 
 const Impl = struct{
-    gl: gl_t,
-    const gl_t = struct{
+    gl: struct{
         clear:      *const fn (
             mask: c.GLbitfield
             ) callconv(.c) void,
@@ -71,7 +70,7 @@ const Impl = struct{
             index:  c.GLuint,
             buffer: c.GLuint,
             ) callconv(.c) void,
-    };
+    },
 
     fn make(self: *zrend.Impl, p_impl: *zplat.Impl) !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
