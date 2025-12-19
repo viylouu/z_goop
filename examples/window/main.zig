@@ -19,7 +19,7 @@ const Game = struct{
         r_impl.clear(.{0.2,0.4,0.3,1});
     }
 
-    pub fn exit() !void {
+    pub fn exit() void {
         std.debug.print("exit!\n", .{});
     }
 };

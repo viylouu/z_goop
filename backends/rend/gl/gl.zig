@@ -8,7 +8,7 @@ const c = @cImport({
     @cInclude("GL/glext.h");
 });
 
-var back = Impl{ .gl = undefined };
+var back = Impl{ .gl = undefined, .cur_pipe = undefined, .cur_index_buf = null, };
 pub var impl = zrend.Impl{
     .act                = &back,
     .name               = "gl",
@@ -29,6 +29,8 @@ pub var impl = zrend.Impl{
 
     .bind_pipeline_fn   = Impl.bind_pipeline,
     .bind_buffer_fn     = Impl.bind_buffer,
+
+    .draw_fn            = Impl.draw,
 };
 
 pub const err = error{
@@ -181,7 +183,24 @@ const Impl = struct{
             index:   c.GLuint,
             divisor: c.GLuint,
             ) callconv(.c) void,
+
+        drawArraysInstanced:   *const fn (
+            mode:  c.GLenum,
+            first: c.GLint,
+            count: c.GLsizei,
+            instancecount: c.GLsizei,
+            ) callconv(.c) void,
+        drawElementsInstanced: *const fn (
+            mode:    c.GLenum,
+            count:   c.GLsizei,
+            type:    c.GLenum,
+            indices: ?*const anyopaque,
+            instancecount: c.GLsizei,
+            ) callconv(.c) void,
     },
+
+    cur_pipe: *zrend.Pipeline,
+    cur_index_buf: ?*zrend.Buffer,
 
     fn make(self: *zrend.Impl, p_impl: *zplat.Impl) !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
@@ -237,6 +256,9 @@ const Impl = struct{
         ts.gl.enableVertexAttribArray = try loadfn(p_impl, "glEnableVertexAttribArray", @TypeOf(ts.gl.enableVertexAttribArray));
         ts.gl.vertexAttribPointer     = try loadfn(p_impl, "glVertexAttribPointer",     @TypeOf(ts.gl.vertexAttribPointer));
         ts.gl.vertexAttribDivisor     = try loadfn(p_impl, "glVertexAttribDivisor",     @TypeOf(ts.gl.vertexAttribDivisor));
+
+        ts.gl.drawArraysInstanced   = try loadfn(p_impl, "glDrawAraysInstanced",    @TypeOf(ts.gl.drawArraysInstanced));
+        ts.gl.drawElementsInstanced = try loadfn(p_impl, "glDrawElementsInstanced", @TypeOf(ts.gl.drawElementsInstanced));
     }
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
@@ -437,8 +459,18 @@ const Impl = struct{
             .Storage           => c.GL_SHADER_STORAGE_BUFFER,
         };
     }
+    fn me_to_gl_topology(top: zrend.Topology) c.GLenum {
+        return switch(top) {
+            .Points => c.GL_POINTS,
+            .Lines => c.GL_LINES,
+            .LineStrip => c.GL_LINE_STRIP,
+            .Triangles => c.GL_TRIANGLES,
+            .TriangleStrip => c.GL_TRIANGLE_STRIP,
+            .TriangleFan => c.GL_TRIANGLE_FAN,
+        };
+    }
 
-    fn bind_pipeline(self: *zrend.Impl, pipeline: zrend.Pipeline) void {
+    fn bind_pipeline(self: *zrend.Impl, pipeline: *zrend.Pipeline) void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
         const pln = pipeline;
 
@@ -491,8 +523,10 @@ const Impl = struct{
             } else
                 ts.gl.vertexAttribDivisor(a.location, 1);
         }
+
+        ts.cur_pipe = pln;
     }
-    fn bind_buffer(self: *zrend.Impl, buffer: zrend.Buffer, slot: u32) void {
+    fn bind_buffer(self: *zrend.Impl, buffer: *zrend.Buffer, slot: u32) void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
 
         const target = me_to_gl_buffer_type(buffer.desc.type);
@@ -500,5 +534,27 @@ const Impl = struct{
 
         if (buffer.desc.type == .Uniform or buffer.desc.type == .Storage)
             ts.gl.bindBufferBase(target, slot, buffer.id);
+
+        if (buffer.desc.type == .Index)
+            ts.cur_index_buf = buffer;
+    }
+
+    fn draw(self: *zrend.Impl, vertex_count: u32, instance_count: u32) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+
+        if (instance_count == 0) return;
+
+        const top = me_to_gl_topology(ts.cur_pipe.desc.topology);
+
+        if (ts.cur_index_buf) |ib| {
+            ts.gl.drawElementsInstanced(
+                top, 
+                @intCast(ib.desc.size / @sizeOf(u32)), 
+                c.GL_UNSIGNED_INT, 
+                null, // dont know if this works
+                @intCast(instance_count)
+                );
+        } else
+            ts.gl.drawArraysInstanced(top, 0, @intCast(vertex_count), @intCast(instance_count));
     }
 };

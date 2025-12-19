@@ -8,7 +8,7 @@ pub fn run(api: struct{
 
     init:   *const fn()        anyerror !void,
     update: *const fn(dt: f32) anyerror !void,
-    exit:   *const fn()        anyerror !void,
+    exit:   *const fn()        void,
 
     title:  [:0]const u8,
     width:  u32,
@@ -36,8 +36,8 @@ pub fn run(api: struct{
         try ap.swap();
     }
 
-    try api.exit();
+    api.exit();
 
-    try ar.delete();
-    try ap.delete();
+    ar.delete();
+    ap.delete();
 }

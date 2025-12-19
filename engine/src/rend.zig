@@ -193,15 +193,15 @@ pub const Impl = struct{
         self.delete_shader_fn(self, shader);
     }
 
-    pub fn bind_pipeline(self: *Impl, pipeline: Pipeline) void {
+    pub fn bind_pipeline(self: *Impl, pipeline: *Pipeline) void {
         self.bind_pipeline_fn(self, pipeline);
     }
-    pub fn bind_buffer(self: *Impl, buffer: Buffer, slot: u32) void {
+    pub fn bind_buffer(self: *Impl, buffer: *Buffer, slot: u32) void {
         self.bind_buffer_fn(self, buffer, slot);
     }
 
-    pub fn draw(self: *Impl, vertices: u32) void {
-        self.draw_fn(self, vertices);
+    pub fn draw(self: *Impl, vertex_count: u32, instance_count: u32) void {
+        self.draw_fn(self, vertex_count, instance_count);
     }
 
     act: *anyopaque,
@@ -221,8 +221,8 @@ pub const Impl = struct{
     make_shader_fn:   *const fn(self: *Impl, desc: ShaderDesc) anyerror !Shader,
     delete_shader_fn: *const fn(self: *Impl, shader: *Shader) void,
 
-    bind_pipeline_fn: *const fn(self: *Impl, pipeline: Pipeline) void,
-    bind_buffer_fn:   *const fn(self: *Impl, buffer: Buffer, slot: u32) void,
+    bind_pipeline_fn: *const fn(self: *Impl, pipeline: *Pipeline) void,
+    bind_buffer_fn:   *const fn(self: *Impl, buffer: *Buffer, slot: u32) void,
 
-    draw_fn: *const fn(self: *Impl, vertices: u32) void,
+    draw_fn: *const fn(self: *Impl, vertex_count: u32, instance_count: u32) void,
 };
