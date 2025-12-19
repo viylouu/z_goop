@@ -295,7 +295,7 @@ const Impl = struct{
         const ts: *Impl = @ptrCast(@alignCast(self.act));
 
         ts.gl.clearColor(col[0],col[1],col[2],col[3]);
-        ts.gl.clear(c.GL_COLOR_BUFFER_BIT);
+        ts.gl.clear(c.GL_COLOR_BUFFER_BIT | c.GL_DEPTH_BUFFER_BIT);
     }
 
     fn make_buffer(self: *zrend.Impl, desc: zrend.BufferDesc, data: ?[]const u8) !zrend.Buffer {
