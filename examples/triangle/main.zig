@@ -11,8 +11,6 @@ const Game = struct{
     pub var tri_pln: zrend.Pipeline = undefined;
 
     pub fn init() !void {
-        //std.debug.print("init!\n", .{});
-        
         var tri_vert = try r_impl.make_shader(.{
             .type = .Vertex,
             .source = @embedFile("tri.vert"),
@@ -31,7 +29,6 @@ const Game = struct{
     }
 
     pub fn update(dt: f32) !void { 
-        //std.debug.print("update! {d:.2} FPS\n", .{ 1.0/dt });
         _ = dt;
         r_impl.clear(.{0,0,0,1});
 
@@ -40,8 +37,6 @@ const Game = struct{
     }
 
     pub fn exit() void {
-        //std.debug.print("exit!\n", .{});
-    
         r_impl.delete_shader(tri_pln.desc.vertex_shader);
         r_impl.delete_shader(tri_pln.desc.fragment_shader);
         r_impl.delete_pipeline(&tri_pln);
