@@ -8,7 +8,7 @@ const c = @cImport({
     @cInclude("GL/glext.h");
 });
 
-var back = Impl{ .gl = undefined, .cur_pipe = undefined, .cur_index_buf = null, };
+var back = Impl{ .gl = undefined, .cur_pipe = undefined, .cur_index_buf = null, .dummy_vao = 0, };
 pub var impl = zrend.Impl{
     .act                = &back,
     .name               = "gl",
@@ -197,19 +197,36 @@ const Impl = struct{
             indices: ?*const anyopaque,
             instancecount: c.GLsizei,
             ) callconv(.c) void,
+    
+        genVertexArrays:    *const fn (
+            n:      c.GLsizei,
+            arrays: [*]c.GLuint,
+            ) callconv(.c) void,
+        deleteVertexArrays: *const fn (
+            n:      c.GLsizei,
+            arrays: [*]const c.GLuint,
+            ) callconv(.c) void,
+        bindVertexArray:    *const fn (
+            array: c.GLuint,
+            ) callconv(.c) void,
     },
 
     cur_pipe: *zrend.Pipeline,
     cur_index_buf: ?*zrend.Buffer,
+    dummy_vao: c.GLuint,
 
     fn make(self: *zrend.Impl, p_impl: *zplat.Impl) !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
         try load(self, p_impl);
 
         ts.gl.viewport(0,0, @intCast(p_impl.width), @intCast(p_impl.height));
+
+        ts.gl.genVertexArrays(1, @ptrCast(&ts.dummy_vao));
+        ts.gl.bindVertexArray(ts.dummy_vao);
     }
     fn delete(self: *zrend.Impl) void {
-        _ = self;
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        ts.gl.deleteVertexArrays(1, @ptrCast(&ts.dummy_vao));
     }
 
     fn load(self: *zrend.Impl, p_impl: *zplat.Impl) !void {
@@ -259,6 +276,10 @@ const Impl = struct{
 
         ts.gl.drawArraysInstanced   = try loadfn(p_impl, "glDrawAraysInstanced",    @TypeOf(ts.gl.drawArraysInstanced));
         ts.gl.drawElementsInstanced = try loadfn(p_impl, "glDrawElementsInstanced", @TypeOf(ts.gl.drawElementsInstanced));
+    
+        ts.gl.genVertexArrays    = try loadfn(p_impl, "glGenVertexArrays",    @TypeOf(ts.gl.genVertexArrays));
+        ts.gl.deleteVertexArrays = try loadfn(p_impl, "glDeleteVertexArrays", @TypeOf(ts.gl.deleteVertexArrays));
+        ts.gl.bindVertexArray    = try loadfn(p_impl, "glBindVertexArray",    @TypeOf(ts.gl.bindVertexArray));
     }
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
@@ -351,8 +372,8 @@ const Impl = struct{
         var sha = zrend.Shader{ .id = 0, .desc = desc, };
 
         const usage: c.GLenum = switch(desc.type) {
-            .vertex => c.GL_VERTEX_SHADER,
-            .fragment => c.GL_FRAGMENT_SHADER,
+            .Vertex => c.GL_VERTEX_SHADER,
+            .Fragment => c.GL_FRAGMENT_SHADER,
         };
 
         sha.id = ts.gl.createShader(usage);
@@ -507,21 +528,23 @@ const Impl = struct{
         } else
             ts.gl.disable(c.GL_BLEND);
 
-        for (pln.desc.vertex_layout_desc.attrs) |a| {
-            ts.gl.enableVertexAttribArray(a.location);
-            ts.gl.vertexAttribPointer(
-                a.location,
-                me_vert_fmt_get_count(a.format),
-                me_to_gl_vert_fmt(a.format),
-                c.GL_FALSE,
-                @intCast(pln.desc.vertex_layout_desc.stride),
-                @ptrFromInt(a.offset),
-                );
+        if (pln.desc.vertex_layout_desc) |lay| {
+            for (lay.attrs) |a| {
+                ts.gl.enableVertexAttribArray(a.location);
+                ts.gl.vertexAttribPointer(
+                    a.location,
+                    me_vert_fmt_get_count(a.format),
+                    me_to_gl_vert_fmt(a.format),
+                    c.GL_FALSE,
+                    @intCast(lay.stride),
+                    @ptrFromInt(a.offset),
+                    );
 
-            if (pln.desc.vertex_layout_desc.type == .Vertex) {
-                ts.gl.vertexAttribDivisor(a.location, 0);
-            } else
-                ts.gl.vertexAttribDivisor(a.location, 1);
+                if (lay.type == .Vertex) {
+                    ts.gl.vertexAttribDivisor(a.location, 0);
+                } else
+                    ts.gl.vertexAttribDivisor(a.location, 1);
+            }
         }
 
         ts.cur_pipe = pln;

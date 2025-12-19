@@ -126,10 +126,10 @@ pub const Pipeline = struct{
     desc: PipelineDesc,
 };
 pub const PipelineDesc = struct{
-    vertex_shader: Shader,
-    fragment_shader: Shader,
+    vertex_shader: *Shader,
+    fragment_shader: *Shader,
     //...
-    vertex_layout_desc: VertexLayoutDesc,
+    vertex_layout_desc: ?VertexLayoutDesc,
 
     topology: Topology = .Triangles,
 
@@ -151,8 +151,8 @@ pub const Shader = struct{
     desc: ShaderDesc,
 };
 pub const ShaderType = enum{
-    vertex,
-    fragment,
+    Vertex,
+    Fragment,
     // more later
 };
 pub const ShaderDesc = struct{

@@ -39,9 +39,21 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    const ex_triangle = b.addExecutable(.{
+        .name = "triangle",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/triangle/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        })
+    });
+
     const examps = [_]*const *std.Build.Step.Compile{
-        &ex_window
+        &ex_window,
+        &ex_triangle,
     };
+
+    var run_step: ?*std.Build.Step = null;
 
     for (examps) |ex| {
         ex.*.linkLibC();
@@ -71,6 +83,12 @@ pub fn build(b: *std.Build) void {
         if (b.args) |args|
             run_cmd.addArgs(args);
 
-        b.step("run", "run the app").dependOn(&run_cmd.step);
+        if (run_step) |step| {
+            step.dependOn(&run_cmd.step);
+        } else {
+            run_step = b.step("run", "run the examples");
+            run_step.?.*.dependOn(&run_cmd.step);
+            //b.step("run", "run the app").dependOn(&run_cmd.step);
+        }
     }
 }
