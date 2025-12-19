@@ -10,54 +10,61 @@ const c = @cImport({
 
 var back = Impl{ .gl = undefined };
 pub var impl = zrend.Impl{
-    .act              = &back,
-    .name             = "gl",
+    .act                = &back,
+    .name               = "gl",
 
-    .make_fn          = Impl.make,
-    .delete_fn        = Impl.delete,
+    .make_fn            = Impl.make,
+    .delete_fn          = Impl.delete,
 
-    .clear_fn         = Impl.clear,
+    .clear_fn           = Impl.clear,
 
-    .make_buffer_fn   = Impl.make_buffer,
-    .delete_buffer_fn = Impl.delete_buffer,
+    .make_buffer_fn     = Impl.make_buffer,
+    .delete_buffer_fn   = Impl.delete_buffer,
+
+    .make_pipeline_fn   = Impl.make_pipeline,
+    .delete_pipeline_fn = Impl.delete_pipeline,
+
+    .make_shader_fn     = Impl.make_shader,
+    .delete_shader_fn   = Impl.delete_shader,
 };
 
 pub const err = error{
     InvalidBufferSize,
     BufferCreationFail,
     CantDeleteNullBuffer,
+    ShaderCompileFail,
 };
 
 const Impl = struct{
     gl: struct{
         clear:      *const fn (
-            mask: c.GLbitfield
+            mask: c.GLbitfield,
             ) callconv(.c) void,
         clearColor: *const fn (
             r: c.GLfloat, 
             g: c.GLfloat, 
             b: c.GLfloat, 
-            a: c.GLfloat
+            a: c.GLfloat,
             ) callconv(.c) void,
 
         viewport: *const fn (
             x: c.GLint, 
             y: c.GLint, 
             w: c.GLint, 
-            h: c.GLint
+            h: c.GLint,
             ) callconv(.c) void,
 
         genBuffers:     *const fn (
             n:    c.GLsizei, 
-            bufs: *c.GLuint
+            bufs: *c.GLuint,
             ) callconv(.c) void,
         deleteBuffers:  *const fn (
             n:    c.GLsizei, 
-            bufs: *const c.GLuint
+            bufs: *const c.GLuint,
             ) callconv(.c) void,
         bindBuffer:     *const fn (
             target: c.GLenum, 
-            buffer: c.GLuint
+            buffer: c.GLuint,
             ) callconv(.c) void,
         bufferData:     *const fn (
             target: c.GLenum,
@@ -69,6 +76,34 @@ const Impl = struct{
             target: c.GLenum,
             index:  c.GLuint,
             buffer: c.GLuint,
+            ) callconv(.c) void,
+    
+        createShader:  *const fn (
+            type: c.GLenum,
+            ) callconv(.c) c.GLuint,
+        deleteShader:  *const fn (
+            shader: c.GLuint,
+            ) callconv(.c) void,
+        shaderSource:  *const fn (
+            shader: c.GLuint,
+            count:  c.GLsizei,
+            string: [*]const [*:0]const c.GLchar, // what the fuck
+            length: ?[*]const c.GLint, //also why
+            ) callconv(.c) void,
+        compileShader: *const fn (
+                shader: c.GLuint,
+            ) callconv(.c) void,
+
+        getShaderIv:      *const fn (
+            shader: c.GLuint,
+            pname:  c.GLenum,
+            params: [*]c.GLint,
+            ) callconv(.c) void,
+        getShaderInfoLog: *const fn (
+            shader:  c.GLuint,
+            bufsize: c.GLsizei,
+            length:  ?*c.GLsizei,
+            infolog: [*]c.GLchar,
             ) callconv(.c) void,
     },
 
@@ -95,6 +130,14 @@ const Impl = struct{
         ts.gl.bindBuffer     = try loadfn(p_impl, "glBindBuffer",     @TypeOf(ts.gl.bindBuffer));
         ts.gl.bufferData     = try loadfn(p_impl, "glBufferData",     @TypeOf(ts.gl.bufferData));
         ts.gl.bindBufferBase = try loadfn(p_impl, "glBindBufferBase", @TypeOf(ts.gl.bindBufferBase));
+
+        ts.gl.createShader  = try loadfn(p_impl, "glCreateShader",  @TypeOf(ts.gl.createShader));
+        ts.gl.deleteShader  = try loadfn(p_impl, "glDeleteShader",  @TypeOf(ts.gl.deleteShader));
+        ts.gl.shaderSource  = try loadfn(p_impl, "glShaderSource",  @TypeOf(ts.gl.shaderSource));
+        ts.gl.compileShader = try loadfn(p_impl, "glCompileShader", @TypeOf(ts.gl.compileShader));
+    
+        ts.gl.getShaderIv      = try loadfn(p_impl, "glGetShaderiv",      @TypeOf(ts.gl.getShaderIv));
+        ts.gl.getShaderInfoLog = try loadfn(p_impl, "glGetShaderInfoLog", @TypeOf(ts.gl.getShaderInfoLog));
     }
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
@@ -109,7 +152,7 @@ const Impl = struct{
 
     fn make_buffer(self: *zrend.Impl, desc: zrend.BufferDesc, data: ?[]const u8) !zrend.Buffer {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
-        var buf = zrend.Buffer{ .id = 0, .desc = desc };
+        var buf = zrend.Buffer{ .id = 0, .desc = desc, };
 
         if (desc.size == 0) return err.InvalidBufferSize;
         
@@ -141,5 +184,69 @@ const Impl = struct{
 
         ts.gl.deleteBuffers(1, &buffer.id);
         buffer.id = 0;
+    }
+
+    fn make_pipeline(self: *zrend.Impl, desc: zrend.PipelineDesc) !zrend.Pipeline {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        const pln = zrend.Pipeline{ .id = 0, .desc = desc, };
+
+        _ = ts;
+
+        return pln;
+    }
+    fn delete_pipeline(self: *zrend.Impl, pipeline: *zrend.Pipeline) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        _ = ts;
+
+        std.debug.assert(pipeline.id != 0);
+
+        pipeline.id = 0;
+    }
+
+    fn make_shader(self: *zrend.Impl, desc: zrend.ShaderDesc) !zrend.Shader {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        var sha = zrend.Shader{ .id = 0, .desc = desc, };
+
+        const usage: c.GLenum = switch(desc.type) {
+            .vertex => c.GL_VERTEX_SHADER,
+            .fragment => c.GL_FRAGMENT_SHADER,
+        };
+
+        sha.id = ts.gl.createShader(usage);
+        ts.gl.shaderSource(sha.id, 1, &.{ desc.source }, null);
+        ts.gl.compileShader(sha.id);
+
+        var succ: c_int = 0;
+        ts.gl.getShaderIv(sha.id, c.GL_COMPILE_STATUS, @ptrCast(&succ));
+        if (succ == 0) {
+            var len: c_int = 0;
+            ts.gl.getShaderIv(sha.id, c.GL_INFO_LOG_LENGTH, @ptrCast(&len));
+
+            const log = try std.heap.c_allocator.alloc(u8, @intCast(len));
+            defer std.heap.c_allocator.free(log);
+
+            _ = ts.gl.getShaderInfoLog(
+                sha.id,
+                len,
+                null,
+                log.ptr
+                );
+
+            std.log.warn("shader compile error!\n{s}\n", .{log});
+
+            ts.gl.deleteShader(sha.id);
+
+            return err.ShaderCompileFail;
+        }
+
+        return sha;
+    }
+    fn delete_shader(self: *zrend.Impl, shader: *zrend.Shader) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+
+        std.debug.assert(shader.id != 0);
+
+        ts.gl.deleteShader(shader.id);
+        shader.id = 0;
     }
 };

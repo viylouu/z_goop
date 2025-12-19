@@ -149,7 +149,7 @@ pub const ShaderType = enum{
 };
 pub const ShaderDesc = struct{
     type: ShaderType,
-    source: []const u8,
+    source: [*:0]const u8,
 };
 
 pub const Impl = struct{
@@ -199,22 +199,22 @@ pub const Impl = struct{
     act: *anyopaque,
     name: []const u8,
 
-    make_fn: *const fn(self: *Impl, p_impl: *plat.Impl) anyerror !void,
+    make_fn:   *const fn(self: *Impl, p_impl: *plat.Impl) anyerror !void,
     delete_fn: *const fn(self: *Impl) void,
 
     clear_fn: *const fn(self: *Impl, col: [4]f32) void,
 
-    make_buffer_fn: *const fn(self: *Impl, desc: BufferDesc, data: ?[]const u8) anyerror !Buffer,
+    make_buffer_fn:   *const fn(self: *Impl, desc: BufferDesc, data: ?[]const u8) anyerror !Buffer,
     delete_buffer_fn: *const fn(self: *Impl, buffer: *Buffer) void,
 
-    make_pipeline_fn: *const fn(self: *Impl, desc: PipelineDesc) anyerror !Pipeline,
+    make_pipeline_fn:   *const fn(self: *Impl, desc: PipelineDesc) anyerror !Pipeline,
     delete_pipeline_fn: *const fn(self: *Impl, pipeline: *Pipeline) void,
 
-    make_shader_fn: *const fn(self: *Impl, desc: ShaderDesc) anyerror !Shader,
+    make_shader_fn:   *const fn(self: *Impl, desc: ShaderDesc) anyerror !Shader,
     delete_shader_fn: *const fn(self: *Impl, shader: *Shader) void,
 
     bind_pipeline_fn: *const fn(self: *Impl, pipeline: Pipeline) void,
-    bind_buffer_fn: *const fn(self: *Impl, buffer: Buffer, slot: u32) void,
+    bind_buffer_fn:   *const fn(self: *Impl, buffer: Buffer, slot: u32) void,
 
     draw_fn: *const fn(self: *Impl, vertices: u32) void,
 };
