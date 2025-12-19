@@ -33,6 +33,7 @@ pub const err = error{
     BufferCreationFail,
     CantDeleteNullBuffer,
     ShaderCompileFail,
+    PipelineLinkFail,
 };
 
 const Impl = struct{
@@ -93,18 +94,42 @@ const Impl = struct{
         compileShader: *const fn (
                 shader: c.GLuint,
             ) callconv(.c) void,
+        attachShader:  *const fn (
+            program: c.GLuint,
+            shader:  c.GLuint,
+            ) callconv(.c) void,
 
-        getShaderIv:      *const fn (
+        createProgram: *const fn (
+            ) callconv(.c) c.GLuint,
+        deleteProgram: *const fn (
+            program: c.GLuint,
+            ) callconv(.c) void,
+        linkProgram:   *const fn (
+            program: c.GLuint,
+            ) callconv(.c) void,
+
+        getShaderIv:       *const fn (
             shader: c.GLuint,
             pname:  c.GLenum,
             params: [*]c.GLint,
             ) callconv(.c) void,
-        getShaderInfoLog: *const fn (
+        getShaderInfoLog:  *const fn (
             shader:  c.GLuint,
             bufsize: c.GLsizei,
             length:  ?*c.GLsizei,
             infolog: [*]c.GLchar,
             ) callconv(.c) void,
+        getProgramIv:      *const fn (
+            program: c.GLuint,
+            pname:   c.GLenum,
+            params:  [*]c.GLint,
+            ) callconv(.c) void,
+        getProgramInfoLog: *const fn (
+            program: c.GLuint,
+            bufsize: c.GLsizei,
+            length:  ?*c.GLsizei,
+            infolog: [*]c.GLchar,
+            ) callconv(.c) void,       
     },
 
     fn make(self: *zrend.Impl, p_impl: *zplat.Impl) !void {
@@ -135,9 +160,16 @@ const Impl = struct{
         ts.gl.deleteShader  = try loadfn(p_impl, "glDeleteShader",  @TypeOf(ts.gl.deleteShader));
         ts.gl.shaderSource  = try loadfn(p_impl, "glShaderSource",  @TypeOf(ts.gl.shaderSource));
         ts.gl.compileShader = try loadfn(p_impl, "glCompileShader", @TypeOf(ts.gl.compileShader));
+        ts.gl.attachShader  = try loadfn(p_impl, "glAttachShader",  @TypeOf(ts.gl.attachShader));
+
+        ts.gl.createProgram = try loadfn(p_impl, "glCreateProgram", @TypeOf(ts.gl.createProgram));
+        ts.gl.deleteProgram = try loadfn(p_impl, "glDeleteProgram", @TypeOf(ts.gl.deleteProgram));
+        ts.gl.linkProgram   = try loadfn(p_impl, "glLinkProgram",   @TypeOf(ts.gl.linkProgram));
     
-        ts.gl.getShaderIv      = try loadfn(p_impl, "glGetShaderiv",      @TypeOf(ts.gl.getShaderIv));
-        ts.gl.getShaderInfoLog = try loadfn(p_impl, "glGetShaderInfoLog", @TypeOf(ts.gl.getShaderInfoLog));
+        ts.gl.getShaderIv       = try loadfn(p_impl, "glGetShaderiv",       @TypeOf(ts.gl.getShaderIv));
+        ts.gl.getShaderInfoLog  = try loadfn(p_impl, "glGetShaderInfoLog",  @TypeOf(ts.gl.getShaderInfoLog));
+        ts.gl.getProgramIv      = try loadfn(p_impl, "glGetProgramiv",      @TypeOf(ts.gl.getProgramIv));
+        ts.gl.getProgramInfoLog = try loadfn(p_impl, "glGetProgramInfoLog", @TypeOf(ts.gl.getProgramInfoLog));
     }
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
@@ -188,18 +220,45 @@ const Impl = struct{
 
     fn make_pipeline(self: *zrend.Impl, desc: zrend.PipelineDesc) !zrend.Pipeline {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
-        const pln = zrend.Pipeline{ .id = 0, .desc = desc, };
+        var pln = zrend.Pipeline{ .id = 0, .desc = desc, };
 
-        _ = ts;
+        pln.id = ts.gl.createProgram();
+
+        ts.gl.attachShader(pln.id, desc.vertex_shader.id);
+        ts.gl.attachShader(pln.id, desc.fragment_shader.id);
+        ts.gl.linkProgram(pln.id);
+
+        var succ: c_int = 0;
+        ts.gl.getProgramIv(pln.id, c.GL_LINK_STATUS, @ptrCast(&succ));
+        if (succ == 0) {
+            var len: c_int = 0;
+            ts.gl.getProgramIv(pln.id, c.GL_INFO_LOG_LENGTH, @ptrCast(&len));
+
+            const log = try std.heap.c_allocator.alloc(u8, @intCast(len));
+            defer std.heap.c_allocator.free(log);
+
+            ts.gl.getShaderInfoLog(
+                pln.id,
+                len,
+                null,
+                log.ptr
+                );
+
+            std.log.warn("pipeline linking error!\n{s}\n", .{log});
+
+            ts.gl.deleteProgram(pln.id);
+
+            return err.ShaderCompileFail;
+        }
 
         return pln;
     }
     fn delete_pipeline(self: *zrend.Impl, pipeline: *zrend.Pipeline) void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
-        _ = ts;
 
         std.debug.assert(pipeline.id != 0);
 
+        ts.gl.deleteProgram(pipeline.id);
         pipeline.id = 0;
     }
 
@@ -225,7 +284,7 @@ const Impl = struct{
             const log = try std.heap.c_allocator.alloc(u8, @intCast(len));
             defer std.heap.c_allocator.free(log);
 
-            _ = ts.gl.getShaderInfoLog(
+            ts.gl.getShaderInfoLog(
                 sha.id,
                 len,
                 null,
