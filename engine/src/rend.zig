@@ -6,11 +6,11 @@ pub const Buffer = struct{
     desc: BufferDesc,
 };
 pub const BufferType = enum{
-    vertex,
-    index,
-    uniform,
-    storage,
-    instance,
+    Vertex,
+    Index,
+    Uniform,
+    Storage,
+    Instance,
 };
 pub const BufferDesc = struct{
     type: BufferType,
@@ -43,11 +43,16 @@ pub const TextureFormat = enum{
 pub const VertexLayoutDesc = struct{
     stride: u32,
     attrs: []const VertexAttrDesc,
+    type: VertexType,
 };
 pub const VertexAttrDesc = struct{
     location: u8,
     format: VertexFormat,
     offset: u32
+};
+pub const VertexType = enum{
+    Vertex,
+    Instance,
 };
 
 pub const VertexFormat = enum{
@@ -78,39 +83,42 @@ pub const FrontFace = enum{
 };
 
 pub const CompareOp = enum{
+    Never,
     Less,
     Greater,
     Equal,
+    NotEqual,
     LessEqual,
     GreaterEqual,
+    Always,
 };
 
 pub const BlendState = struct{
-    src_color: BlendFactor = .one,
-    dst_color: BlendFactor = .zero,
-    color_op: BlendOp = .add,
-    src_alpha: BlendFactor = .one,
-    dst_alpha: BlendFactor = .zero,
-    alpha_op: BlendOp = .add,
+    src_color: BlendFactor = .One,
+    dst_color: BlendFactor = .Zero,
+    color_op: BlendOp = .Add,
+    src_alpha: BlendFactor = .One,
+    dst_alpha: BlendFactor = .Zero,
+    alpha_op: BlendOp = .Add,
 };
 pub const BlendFactor = enum{
-    zero,
-    one,
-    src_color,
-    inv_src_color,
-    dst_color,
-    inv_dst_color,
-    src_alpha,
-    inv_src_alpha,
-    dst_alpha,
-    inv_dst_alpha,
+    Zero,
+    One,
+    SrcColor,
+    InvSrcColor,
+    DstColor,
+    InvDstColor,
+    SrcAlpha,
+    InvSrcAlpha,
+    DstAlpha,
+    InvDstAlpha,
 };
 pub const BlendOp = enum{
-    add,
-    subtract,
-    rev_subtract,
-    min,
-    max,
+    Add,
+    Subtract,
+    RevSubtract,
+    Min,
+    Max,
 };
 
 pub const Pipeline = struct{
@@ -134,8 +142,8 @@ pub const PipelineDesc = struct{
 
     blend: ?BlendState = null,
 
-    color_formats: []const TextureFormat,
-    depth_format: ?TextureFormat = null,
+    //color_formats: []const TextureFormat,
+    //depth_format: ?TextureFormat = null,
 };
 
 pub const Shader = struct{

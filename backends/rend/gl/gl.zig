@@ -26,6 +26,9 @@ pub var impl = zrend.Impl{
 
     .make_shader_fn     = Impl.make_shader,
     .delete_shader_fn   = Impl.delete_shader,
+
+    .bind_pipeline_fn   = Impl.bind_pipeline,
+    .bind_buffer_fn     = Impl.bind_buffer,
 };
 
 pub const err = error{
@@ -53,6 +56,35 @@ const Impl = struct{
             y: c.GLint, 
             w: c.GLint, 
             h: c.GLint,
+            ) callconv(.c) void,
+        
+        enable:  *const fn (
+            index: c.GLuint,
+            ) callconv(.c) void,
+        disable: *const fn (
+            index: c.GLuint,
+            ) callconv(.c) void,
+
+        cullFace:  *const fn (
+            mode: c.GLenum,
+            ) callconv(.c) void,
+
+        depthFunc: *const fn (
+            mode: c.GLenum,
+            ) callconv(.c) void,
+        depthMask: *const fn (
+            flag: c.GLboolean,
+            ) callconv(.c) void,
+
+        blendFuncSeparate:     *const fn (
+            srcrgb:   c.GLenum,
+            dstrgb:   c.GLenum,
+            srcalpha: c.GLenum,
+            dstalpha: c.GLenum,
+            ) callconv(.c) void,
+        blendEquationSeparate: *const fn (
+            modergb:   c.GLenum,
+            modealpha: c.GLenum,
             ) callconv(.c) void,
 
         genBuffers:     *const fn (
@@ -107,6 +139,9 @@ const Impl = struct{
         linkProgram:   *const fn (
             program: c.GLuint,
             ) callconv(.c) void,
+        useProgram:    *const fn (
+            program: c.GLuint,
+            ) callconv(.c) void,
 
         getShaderIv:       *const fn (
             shader: c.GLuint,
@@ -130,6 +165,22 @@ const Impl = struct{
             length:  ?*c.GLsizei,
             infolog: [*]c.GLchar,
             ) callconv(.c) void,       
+    
+        enableVertexAttribArray: *const fn (
+            index: c.GLuint,
+            ) callconv(.c) void,
+        vertexAttribPointer:     *const fn (
+            index:      c.GLuint,
+            size:       c.GLint,
+            type:       c.GLenum,
+            normalized: c.GLboolean,
+            stride:     c.GLsizei,
+            pointer:    *const anyopaque,
+            ) callconv(.c) void,
+        vertexAttribDivisor:     *const fn (
+            index:   c.GLuint,
+            divisor: c.GLuint,
+            ) callconv(.c) void,
     },
 
     fn make(self: *zrend.Impl, p_impl: *zplat.Impl) !void {
@@ -150,6 +201,17 @@ const Impl = struct{
 
         ts.gl.viewport = try loadfn(p_impl, "glViewport", @TypeOf(ts.gl.viewport));
 
+        ts.gl.enable  = try loadfn(p_impl, "glEnable",  @TypeOf(ts.gl.enable));
+        ts.gl.disable = try loadfn(p_impl, "glDisable", @TypeOf(ts.gl.disable));
+
+        ts.gl.cullFace = try loadfn(p_impl, "glCullFace", @TypeOf(ts.gl.cullFace));
+
+        ts.gl.depthFunc = try loadfn(p_impl, "glDepthFunc", @TypeOf(ts.gl.depthFunc));
+        ts.gl.depthMask = try loadfn(p_impl, "glDepthMask", @TypeOf(ts.gl.depthMask));
+
+        ts.gl.blendFuncSeparate     = try loadfn(p_impl, "glBlendFuncSeparate",     @TypeOf(ts.gl.blendFuncSeparate));
+        ts.gl.blendEquationSeparate = try loadfn(p_impl, "glBlendEquationSeparate", @TypeOf(ts.gl.blendEquationSeparate));
+
         ts.gl.genBuffers     = try loadfn(p_impl, "glGenBuffers",     @TypeOf(ts.gl.genBuffers));
         ts.gl.deleteBuffers  = try loadfn(p_impl, "glDeleteBuffers",  @TypeOf(ts.gl.deleteBuffers));
         ts.gl.bindBuffer     = try loadfn(p_impl, "glBindBuffer",     @TypeOf(ts.gl.bindBuffer));
@@ -165,11 +227,16 @@ const Impl = struct{
         ts.gl.createProgram = try loadfn(p_impl, "glCreateProgram", @TypeOf(ts.gl.createProgram));
         ts.gl.deleteProgram = try loadfn(p_impl, "glDeleteProgram", @TypeOf(ts.gl.deleteProgram));
         ts.gl.linkProgram   = try loadfn(p_impl, "glLinkProgram",   @TypeOf(ts.gl.linkProgram));
+        ts.gl.useProgram    = try loadfn(p_impl, "glUseProgram",    @TypeOf(ts.gl.useProgram));
     
         ts.gl.getShaderIv       = try loadfn(p_impl, "glGetShaderiv",       @TypeOf(ts.gl.getShaderIv));
         ts.gl.getShaderInfoLog  = try loadfn(p_impl, "glGetShaderInfoLog",  @TypeOf(ts.gl.getShaderInfoLog));
         ts.gl.getProgramIv      = try loadfn(p_impl, "glGetProgramiv",      @TypeOf(ts.gl.getProgramIv));
         ts.gl.getProgramInfoLog = try loadfn(p_impl, "glGetProgramInfoLog", @TypeOf(ts.gl.getProgramInfoLog));
+
+        ts.gl.enableVertexAttribArray = try loadfn(p_impl, "glEnableVertexAttribArray", @TypeOf(ts.gl.enableVertexAttribArray));
+        ts.gl.vertexAttribPointer     = try loadfn(p_impl, "glVertexAttribPointer",     @TypeOf(ts.gl.vertexAttribPointer));
+        ts.gl.vertexAttribDivisor     = try loadfn(p_impl, "glVertexAttribDivisor",     @TypeOf(ts.gl.vertexAttribDivisor));
     }
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
@@ -191,12 +258,7 @@ const Impl = struct{
         ts.gl.genBuffers(1, &buf.id);
         if (buf.id == 0) return err.BufferCreationFail;
 
-        const targ: c.GLenum = switch(desc.type) {
-                .vertex, .instance => c.GL_ARRAY_BUFFER,
-                .index             => c.GL_ELEMENT_ARRAY_BUFFER,
-                .uniform           => c.GL_UNIFORM_BUFFER,
-                .storage           => c.GL_SHADER_STORAGE_BUFFER,
-            };
+        const targ: c.GLenum = me_to_gl_buffer_type(desc.type);
 
         ts.gl.bindBuffer(targ, buf.id);
         ts.gl.bufferData(
@@ -307,5 +369,136 @@ const Impl = struct{
 
         ts.gl.deleteShader(shader.id);
         shader.id = 0;
+    }
+
+    fn me_to_gl_cullmode(cull: zrend.CullMode) c.GLenum {
+        return switch(cull) {
+            .Back  => c.GL_BACK,
+            .Front => c.GL_FRONT,
+            .None  => unreachable,
+        };
+    }
+    fn me_to_gl_cmpop(cmpop: zrend.CompareOp) c.GLenum {
+        return switch(cmpop) {
+            .Never        => c.GL_NEVER,
+            .Less         => c.GL_LESS,
+            .Greater      => c.GL_GREATER,
+            .Equal        => c.GL_EQUAL,
+            .NotEqual     => c.GL_NOTEQUAL,
+            .LessEqual    => c.GL_LEQUAL,
+            .GreaterEqual => c.GL_GEQUAL,
+            .Always       => c.GL_ALWAYS,
+        };
+    }
+    fn me_to_gl_blendfac(fac: zrend.BlendFactor) c.GLenum {
+        return switch(fac) {
+            .Zero        => c.GL_ZERO,
+            .One         => c.GL_ONE,
+            .SrcColor    => c.GL_SRC_COLOR,
+            .InvSrcColor => c.GL_ONE_MINUS_SRC_COLOR,
+            .DstColor    => c.GL_DST_COLOR,
+            .InvDstColor => c.GL_ONE_MINUS_DST_COLOR,
+            .SrcAlpha    => c.GL_SRC_ALPHA,
+            .InvSrcAlpha => c.GL_ONE_MINUS_SRC_ALPHA,
+            .DstAlpha    => c.GL_DST_ALPHA,
+            .InvDstAlpha => c.GL_ONE_MINUS_DST_ALPHA,
+        };
+    }
+    fn me_to_gl_blendeq(op: zrend.BlendOp) c.GLenum {
+        return switch(op) {
+            .Add         => c.GL_FUNC_ADD,
+            .Subtract    => c.GL_FUNC_SUBTRACT,
+            .RevSubtract => c.GL_FUNC_REVERSE_SUBTRACT,
+            .Min         => c.GL_MIN,
+            .Max         => c.GL_MAX,
+        };
+    }
+    fn me_to_gl_bool(cond: bool) c.GLboolean {
+        if (cond) return c.GL_TRUE;
+        return c.GL_FALSE;
+    }
+    fn me_to_gl_vert_fmt(fmt: zrend.VertexFormat) c.GLenum {
+        _ = fmt;
+        return c.GL_FLOAT; // for now
+    }
+    fn me_vert_fmt_get_count(fmt: zrend.VertexFormat) c.GLint {
+        return switch(fmt) {
+            .Float   => 1,
+            .Vector2 => 2,
+            .Vector3 => 3,
+            .Vector4 => 4,
+        };
+    }
+    fn me_to_gl_buffer_type(t: zrend.BufferType) c.GLenum {
+        return switch(t) {
+            .Vertex, .Instance => c.GL_ARRAY_BUFFER,
+            .Index             => c.GL_ELEMENT_ARRAY_BUFFER,
+            .Uniform           => c.GL_UNIFORM_BUFFER,
+            .Storage           => c.GL_SHADER_STORAGE_BUFFER,
+        };
+    }
+
+    fn bind_pipeline(self: *zrend.Impl, pipeline: zrend.Pipeline) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        const pln = pipeline;
+
+        ts.gl.useProgram(pln.id);
+
+        if (pln.desc.cull_mode != .None) {
+            ts.gl.enable(c.GL_CULL_FACE);
+            ts.gl.cullFace(me_to_gl_cullmode(pln.desc.cull_mode));
+        } else
+            ts.gl.disable(c.GL_CULL_FACE);
+
+        if (pln.desc.depth_test) {
+            ts.gl.enable(c.GL_DEPTH_TEST);
+            ts.gl.depthFunc(me_to_gl_cmpop(pln.desc.depth_compare));
+            ts.gl.depthMask(me_to_gl_bool(pln.desc.depth_write));
+        } else {
+            ts.gl.disable(c.GL_DEPTH_TEST);
+            ts.gl.depthMask(c.GL_FALSE);
+        }
+
+        if (pln.desc.blend) |b| {
+            ts.gl.enable(c.GL_BLEND);
+
+            ts.gl.blendFuncSeparate(
+                me_to_gl_blendfac(b.src_color),
+                me_to_gl_blendfac(b.dst_color),
+                me_to_gl_blendfac(b.src_alpha),
+                me_to_gl_blendfac(b.dst_alpha),
+                );
+            ts.gl.blendEquationSeparate(
+                me_to_gl_blendeq(b.color_op),
+                me_to_gl_blendeq(b.alpha_op),
+                );
+        } else
+            ts.gl.disable(c.GL_BLEND);
+
+        for (pln.desc.vertex_layout_desc.attrs) |a| {
+            ts.gl.enableVertexAttribArray(a.location);
+            ts.gl.vertexAttribPointer(
+                a.location,
+                me_vert_fmt_get_count(a.format),
+                me_to_gl_vert_fmt(a.format),
+                c.GL_FALSE,
+                @intCast(pln.desc.vertex_layout_desc.stride),
+                @ptrFromInt(a.offset),
+                );
+
+            if (pln.desc.vertex_layout_desc.type == .Vertex) {
+                ts.gl.vertexAttribDivisor(a.location, 0);
+            } else
+                ts.gl.vertexAttribDivisor(a.location, 1);
+        }
+    }
+    fn bind_buffer(self: *zrend.Impl, buffer: zrend.Buffer, slot: u32) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+
+        const target = me_to_gl_buffer_type(buffer.desc.type);
+        ts.gl.bindBuffer(target, buffer.id);
+
+        if (buffer.desc.type == .Uniform or buffer.desc.type == .Storage)
+            ts.gl.bindBufferBase(target, slot, buffer.id);
     }
 };
