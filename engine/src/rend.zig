@@ -22,22 +22,22 @@ pub const Texture = struct{
     fmt: TextureFormat,
 };
 pub const TextureFormat = enum{
-    RGBA8,
-    RGB8,
+    Rgba8,
+    Rgb8,
     R8,
 
-    RGBA16F,
-    RGB16F,
-    R16F,
+    Rgba16f,
+    Rgb16f,
+    R16f,
 
-    RGBA32F,
-    RGB32F,
-    R32F,
+    Rgba32f,
+    Rgb32f,
+    R32f,
 
-    DEPTH24,
-    DEPTH32F,
-    DEPTH24_STENCIL8,
-    DEPTH32F_STENCIL8,
+    Depth24,
+    Depth32f,
+    Depth24Stencil8,
+    Depth32fStencil8,
 };
 
 pub const VertexLayoutDesc = struct{
