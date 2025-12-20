@@ -19,7 +19,25 @@ pub const BufferDesc = struct{
 
 pub const Texture = struct{
     id: u32,
-    fmt: TextureFormat,
+    desc: TextureDesc,
+};
+pub const TextureDesc = struct{
+    type: TextureType   = .Tex2D,
+    usage: TextureUsage = .Sampler,
+    fmt: TextureFormat  = .Rgba8,
+    sampling: TextureSampling = .Nearest,
+    wrap: TextureWrap = .Repeat,
+    width: u32,
+    height: u32,
+    mipmaps: bool = false,
+};
+pub const TextureType = enum{
+    Tex2D,
+    Cubemap,
+};
+pub const TextureUsage = enum{
+    Sampler,
+    Target,
 };
 pub const TextureFormat = enum{
     Rgba8,
@@ -38,6 +56,14 @@ pub const TextureFormat = enum{
     Depth32f,
     Depth24Stencil8,
     Depth32fStencil8,
+};
+pub const TextureSampling = enum{
+    Nearest,
+    Linear,
+};
+pub const TextureWrap = enum{
+    Repeat,
+    // more
 };
 
 pub const VertexLayoutDesc = struct{
@@ -197,11 +223,21 @@ pub const Impl = struct{
         self.delete_shader_fn(self, shader);
     }
 
+    pub fn make_texture(self: *Impl, desc: TextureDesc, data: ?[]const u8) anyerror !Texture {
+        return try self.make_texture_fn(self, desc, data);
+    }
+    pub fn delete_texture(self: *Impl, texture: *Texture) void {
+        self.delete_texture_fn(self, texture);
+    }
+
     pub fn bind_pipeline(self: *Impl, pipeline: *Pipeline) void {
         self.bind_pipeline_fn(self, pipeline);
     }
     pub fn bind_buffer(self: *Impl, buffer: *Buffer, slot: u32) void {
         self.bind_buffer_fn(self, buffer, slot);
+    }
+    pub fn bind_texture(self: *Impl, texture: *Texture, slot: u32, location: u32) void {
+        self.bind_texture_fn(self, texture, slot, location);
     }
 
     pub fn draw(self: *Impl, vertex_count: u32, instance_count: u32) void {
@@ -227,8 +263,12 @@ pub const Impl = struct{
     make_shader_fn:   *const fn(self: *Impl, desc: ShaderDesc) anyerror !Shader,
     delete_shader_fn: *const fn(self: *Impl, shader: *Shader) void,
 
+    make_texture_fn:   *const fn(self: *Impl, desc: TextureDesc, data: ?[]const u8) anyerror !Texture,
+    delete_texture_fn: *const fn(self: *Impl, texture: *Texture) void,
+
     bind_pipeline_fn: *const fn(self: *Impl, pipeline: *Pipeline) void,
     bind_buffer_fn:   *const fn(self: *Impl, buffer: *Buffer, slot: u32) void,
+    bind_texture_fn:  *const fn(self: *Impl, texture: *Texture, slot: u32, location: u32) void,
 
     draw_fn: *const fn(self: *Impl, vertex_count: u32, instance_count: u32) void,
 };

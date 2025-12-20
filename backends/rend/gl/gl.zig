@@ -29,8 +29,12 @@ pub var impl = zrend.Impl{
     .make_shader_fn     = Impl.make_shader,
     .delete_shader_fn   = Impl.delete_shader,
 
+    .make_texture_fn    = Impl.make_texture,
+    .delete_texture_fn  = Impl.delete_texture,
+
     .bind_pipeline_fn   = Impl.bind_pipeline,
     .bind_buffer_fn     = Impl.bind_buffer,
+    .bind_texture_fn    = Impl.bind_texture,
 
     .draw_fn            = Impl.draw,
 };
@@ -41,6 +45,7 @@ pub const err = error{
     CantDeleteNullBuffer,
     ShaderCompileFail,
     PipelineLinkFail,
+    TextureCreationFail,
 };
 
 const Impl = struct{
@@ -211,6 +216,43 @@ const Impl = struct{
         bindVertexArray:    *const fn (
             array: c.GLuint,
             ) callconv(.c) void,
+    
+        genTextures:    *const fn(
+            n:        c.GLsizei,
+            textures: *c.GLuint,
+            ) callconv(.c) void,
+        deleteTextures: *const fn(
+            n:        c.GLsizei,
+            textures: *c.GLuint,
+            ) callconv(.c) void,
+        bindTexture:    *const fn(
+            target:  c.GLenum,
+            texture: c.GLuint,
+            ) callconv(.c) void,
+        texImage2D:     *const fn(
+            target: c.GLenum,
+            level:  c.GLint,
+            internalformat: c.GLint,
+            width:  c.GLsizei,
+            height: c.GLsizei,
+            border: c.GLint,
+            format: c.GLenum,
+            type:   c.GLenum,
+            pixels: ?*const anyopaque,
+            ) callconv(.c) void,
+        texParameterI:  *const fn(
+            target: c.GLenum,
+            pname:  c.GLenum,
+            param:  c.GLint,
+            ) callconv(.c) void,
+        activeTexture:  *const fn(
+            texture: c.GLenum,
+            ) callconv(.c) void,
+    
+        uniform1i: *const fn(
+            location: c.GLint,
+            v0:       c.GLint,
+            ) callconv(.c) void,
     },
 
     cur_pipe: *zrend.Pipeline,
@@ -286,6 +328,15 @@ const Impl = struct{
         ts.gl.genVertexArrays    = try loadfn(p_impl, "glGenVertexArrays",    @TypeOf(ts.gl.genVertexArrays));
         ts.gl.deleteVertexArrays = try loadfn(p_impl, "glDeleteVertexArrays", @TypeOf(ts.gl.deleteVertexArrays));
         ts.gl.bindVertexArray    = try loadfn(p_impl, "glBindVertexArray",    @TypeOf(ts.gl.bindVertexArray));
+    
+        ts.gl.genTextures    = try loadfn(p_impl, "glGenTextures",    @TypeOf(ts.gl.genTextures));
+        ts.gl.deleteTextures = try loadfn(p_impl, "glDeleteTextures", @TypeOf(ts.gl.deleteTextures));
+        ts.gl.bindTexture    = try loadfn(p_impl, "glBindTexture",    @TypeOf(ts.gl.bindTexture));
+        ts.gl.texImage2D     = try loadfn(p_impl, "glTexImage2D",     @TypeOf(ts.gl.texImage2D));
+        ts.gl.texParameterI  = try loadfn(p_impl, "glTexParameteri",  @TypeOf(ts.gl.texParameterI));
+        ts.gl.activeTexture  = try loadfn(p_impl, "glActiveTexture",  @TypeOf(ts.gl.activeTexture));
+    
+        ts.gl.uniform1i = try loadfn(p_impl, "glUniform1i", @TypeOf(ts.gl.uniform1i));
     }
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
@@ -420,6 +471,52 @@ const Impl = struct{
         shader.id = 0;
     }
 
+    fn make_texture(self: *zrend.Impl, desc: zrend.TextureDesc, data: ?[]const u8) !zrend.Texture {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        var tex = zrend.Texture{ .id = 0, .desc = desc, };
+
+        ts.gl.genTextures(1, &tex.id);
+        if (tex.id == 0) return err.TextureCreationFail;
+
+        const target: c.GLenum = c.GL_TEXTURE_2D; // change later to use me_to_gl_texturetype or smth
+
+        ts.gl.bindTexture(target, tex.id);
+
+        const sampling: c.GLenum = c.GL_NEAREST; // change later to use me_to_gl_texturesampling or smth
+        const wrap: c.GLenum = c.GL_REPEAT; // change later to use me_to_gl_texturewrap or smth
+
+        ts.gl.texParameterI(target, c.GL_TEXTURE_MIN_FILTER, sampling);
+        ts.gl.texParameterI(target, c.GL_TEXTURE_MAG_FILTER, sampling);
+        ts.gl.texParameterI(target, c.GL_TEXTURE_WRAP_S, wrap);
+        ts.gl.texParameterI(target, c.GL_TEXTURE_WRAP_T, wrap);
+
+        const fmt = me_to_gl_texture_fmt(desc.fmt);
+
+        ts.gl.texImage2D(
+            target,
+            0,
+            fmt.internal,
+            @intCast(desc.width),
+            @intCast(desc.height),
+            0,
+            fmt.format,
+            fmt.type,
+            if (data) |d| d.ptr else null,
+            );
+
+        ts.gl.bindTexture(target, 0);
+
+        return tex;
+    }
+    fn delete_texture(self: *zrend.Impl, texture: *zrend.Texture) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+
+        std.debug.assert(texture.id != 0);
+
+        ts.gl.deleteTextures(1, &texture.id);
+        texture.id = 0;
+    }
+
     fn me_to_gl_cullmode(cull: zrend.CullMode) c.GLenum {
         return switch(cull) {
             .Back  => c.GL_BACK,
@@ -496,6 +593,81 @@ const Impl = struct{
             .TriangleFan => c.GL_TRIANGLE_FAN,
         };
     }
+    fn me_to_gl_texture_fmt(fmt: zrend.TextureFormat) _gl_tex_fmt {
+        return switch(fmt) {
+            .Rgba8 => .{
+                .internal = c.GL_RGBA8,
+                .format   = c.GL_RGBA,
+                .type     = c.GL_UNSIGNED_BYTE,
+                },
+            .Rgb8 => .{
+                .internal = c.GL_RGB8,
+                .format   = c.GL_RGB,
+                .type     = c.GL_UNSIGNED_BYTE,
+                },
+            .R8 => .{
+                .internal = c.GL_R8,
+                .format   = c.GL_RED,
+                .type     = c.GL_UNSIGNED_BYTE,
+                },
+            .Rgba16f => .{
+                .internal = c.GL_RGBA16F,
+                .format   = c.GL_RGBA,
+                .type     = c.GL_HALF_FLOAT,
+                },
+            .Rgb16f => .{
+                .internal = c.GL_RGB16F,
+                .format   = c.GL_RGB,
+                .type     = c.GL_HALF_FLOAT,
+                },
+            .R16f => .{
+                .internal = c.GL_R16F,
+                .format   = c.GL_RED,
+                .type     = c.GL_HALF_FLOAT,
+                },
+            .Rgba32f => .{
+                .internal = c.GL_RGBA32F,
+                .format   = c.GL_RGBA,
+                .type     = c.GL_FLOAT,
+                },
+            .Rgb32f => .{
+                .internal = c.GL_RGB32F,
+                .format   = c.GL_RGB,
+                .type     = c.GL_FLOAT,
+                },
+            .R32f => .{
+                .internal = c.GL_R32F,
+                .format   = c.GL_RED,
+                .type     = c.GL_FLOAT,
+                },
+            .Depth24 => .{
+                .internal = c.GL_DEPTH_COMPONENT24,
+                .format   = c.GL_DEPTH_COMPONENT,
+                .type     = c.GL_UNSIGNED_INT,
+                },
+            .Depth32f => .{
+                .internal = c.GL_DEPTH_COMPONENT32F,
+                .format   = c.GL_DEPTH_COMPONENT,
+                .type     = c.GL_FLOAT,
+            },
+            .Depth24Stencil8 => .{
+                .internal = c.GL_DEPTH24_STENCIL8,
+                .format   = c.GL_DEPTH_STENCIL,
+                .type     = c.GL_UNSIGNED_INT_24_8,
+                },
+            .Depth32fStencil8 => .{
+                .internal = c.GL_DEPTH32F_STENCIL8,
+                .format   = c.GL_DEPTH_STENCIL,
+                .type     = c.GL_FLOAT_32_UNSIGNED_INT_24_8_REV,
+                },
+        };
+    }
+
+    const _gl_tex_fmt = struct{
+        internal: c.GLint,
+        format:   c.GLenum,
+        type:     c.GLenum,
+    };
 
     fn bind_pipeline(self: *zrend.Impl, pipeline: *zrend.Pipeline) void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
@@ -566,6 +738,13 @@ const Impl = struct{
 
         if (buffer.desc.type == .Index)
             ts.cur_index_buf = buffer;
+    }
+    fn bind_texture(self: *zrend.Impl, texture: *zrend.Texture, slot: u32, location: u32) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+
+        ts.gl.activeTexture(@as(c_uint, @intCast(c.GL_TEXTURE0)) + @as(c_uint, @intCast(slot)));
+        ts.gl.bindTexture(c.GL_TEXTURE_2D, texture.id); // TODO: change c.GL_TEXTURE_2D to convfmt from tex
+        ts.gl.uniform1i(@intCast(location), @intCast(slot));
     }
 
     fn draw(self: *zrend.Impl, vertex_count: u32, instance_count: u32) void {

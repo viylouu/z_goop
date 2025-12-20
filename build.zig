@@ -48,12 +48,26 @@ pub fn build(b: *std.Build) void {
         })
     });
 
+    const ex_texture = b.addExecutable(.{
+        .name = "texture",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/texture/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        })
+    }); ex_texture.addIncludePath(.{ .cwd_relative = "examples/texture/" });
+
     const examps = [_]*const *std.Build.Step.Compile{
         &ex_window,
         &ex_triangle,
+        &ex_texture,
     };
 
-    var run_step: ?*std.Build.Step = null;
+    const run_step = b.step("run", "run an example");
+
+    const ex_name = if (b.args) |args|
+        if (args.len > 0) args[0] else null
+        else null;
 
     for (examps) |ex| {
         ex.*.linkLibC();
@@ -77,18 +91,32 @@ pub fn build(b: *std.Build) void {
 
         b.installArtifact(ex.*);
 
-        const run_cmd = b.addRunArtifact(ex.*);
-        run_cmd.step.dependOn(b.getInstallStep());
+        if (ex_name) |name| {
+            if (std.mem.eql(u8, name, ex.*.name)) {
+                const run_cmd = b.addRunArtifact(ex.*);
+                run_cmd.step.dependOn(b.getInstallStep());
 
-        if (b.args) |args|
-            run_cmd.addArgs(args);
+                if (b.args) |args| {
+                    if (args.len > 1)
+                        run_cmd.addArgs(args[1..]);
+                }
 
-        if (run_step) |step| {
-            step.dependOn(&run_cmd.step);
-        } else {
-            run_step = b.step("run", "run the examples");
-            run_step.?.*.dependOn(&run_cmd.step);
-            //b.step("run", "run the app").dependOn(&run_cmd.step);
+                run_step.dependOn(&run_cmd.step);
+            }
         }
+
+        //const run_cmd = b.addRunArtifact(ex.*);
+        //run_cmd.step.dependOn(b.getInstallStep());
+
+        //if (b.args) |args|
+        //    run_cmd.addArgs(args);
+
+        //if (run_step) |step| {
+        //    step.dependOn(&run_cmd.step);
+        //} else {
+        //    run_step = b.step("run", "run the examples");
+        //    run_step.?.*.dependOn(&run_cmd.step);
+            //b.step("run", "run the app").dependOn(&run_cmd.step);
+        //}
     }
 }
