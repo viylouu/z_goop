@@ -19,8 +19,6 @@ pub var impl = zplat.Impl{
     .make_fn      = Impl.make,
     .delete_fn    = Impl.delete,
 
-    .get_size_fn  = Impl.get_size,
-
     .get_time_fn  = Impl.get_time,
 
     .is_closed_fn = Impl.is_closed,
@@ -41,6 +39,13 @@ const Impl = struct{
         OutOfMemory,
         MissingSymbol,
     };
+
+    fn _fbscb(window: ?*c.GLFWwindow, width: c_int, height: c_int) callconv(.c) void {
+        std.debug.assert(window != null);
+        const self: *zplat.Impl = @ptrCast(@alignCast(c.glfwGetWindowUserPointer(window).?));
+        self.*.width = @intCast(width);
+        self.*.height = @intCast(height);
+    }
 
     fn make(self: *zplat.Impl, r_impl: *zrend.Impl, width: u32, height: u32, title: [:0]const u8) err !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
@@ -74,6 +79,9 @@ const Impl = struct{
         c.glfwPollEvents();
         c.glfwSetWindowSize(ts.window, @intCast(width), @intCast(height));
 
+        c.glfwSetWindowUserPointer(ts.window, self);
+        _ = c.glfwSetFramebufferSizeCallback(ts.window, _fbscb);
+
         c.glfwSwapInterval(1);
     }
     fn delete(self: *zplat.Impl) void {
@@ -84,11 +92,6 @@ const Impl = struct{
 
         c.glfwDestroyWindow(ts.window);
         c.glfwTerminate();
-    }
-
-    fn get_size(self: *zplat.Impl, width: *i32, height: *i32) void {
-        const ts: *Impl = @ptrCast(@alignCast(self.act));
-        c.glfwGetWindowSize(ts.window, @ptrCast(width), @ptrCast(height));
     }
 
     fn get_time(self: *zplat.Impl) f32 {

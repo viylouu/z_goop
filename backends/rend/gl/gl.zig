@@ -230,7 +230,7 @@ const Impl = struct{
         ts.gl.deleteVertexArrays(1, @ptrCast(&ts.dummy_vao));
     }
 
-    fn resize(self: *zrend.Impl, width: i32, height: i32) void {
+    fn resize(self: *zrend.Impl, width: u32, height: u32) void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
         ts.gl.viewport(0,0, @intCast(width), @intCast(height));
     }

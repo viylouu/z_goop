@@ -27,10 +27,7 @@ pub fn run(api: struct{
     while (!api.plat_impl.is_closed()) {
         try ap.poll();
 
-        var w: i32 = 0;
-        var h: i32 = 0;
-        ap.get_size(&w,&h);
-        ar.resize(w,h);
+        ar.resize(ap.width,ap.height);
 
         const time = ap.get_time();
         const delta = time - last_time;

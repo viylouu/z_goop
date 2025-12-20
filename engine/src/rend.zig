@@ -168,7 +168,7 @@ pub const Impl = struct{
         self.delete_fn(self); 
     }
 
-    pub fn resize(self: *Impl, width: i32, height: i32) void {
+    pub fn resize(self: *Impl, width: u32, height: u32) void {
         self.resize_fn(self, width, height);
     }
 
@@ -214,7 +214,7 @@ pub const Impl = struct{
     make_fn:   *const fn(self: *Impl, p_impl: *plat.Impl) anyerror !void,
     delete_fn: *const fn(self: *Impl) void,
 
-    resize_fn: *const fn(self: *Impl, width: i32, height: i32) void,
+    resize_fn: *const fn(self: *Impl, width: u32, height: u32) void,
 
     clear_fn: *const fn(self: *Impl, col: [4]f32) void,
 
