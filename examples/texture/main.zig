@@ -73,7 +73,7 @@ pub fn main() !void {
         .update = Game.update,
         .exit   = Game.exit,
 
-        .title  = "triangle",
+        .title  = "texture",
         .width  = 800,
         .height = 600,
     });

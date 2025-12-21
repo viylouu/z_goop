@@ -3,10 +3,10 @@ const zg = @import("z_goop");
 const zrend = zg.rend;
 
 var state: struct{
-    arena: std.heap.ArenaAllocator,
-    alloc: std.mem.Allocator,
+    arena: std.heap.ArenaAllocator = undefined,
+    alloc: std.mem.Allocator       = undefined,
 
-    r: *zrend.Impl,
+    r: *zrend.Impl = undefined,
 } = .{};
 
 pub fn init(desc: struct{ 

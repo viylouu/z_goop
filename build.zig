@@ -64,10 +64,20 @@ pub fn build(b: *std.Build) void {
         })
     }); ex_texture.addIncludePath(.{ .cwd_relative = "examples/texture/" });
 
+    const ex_graah = b.addExecutable(.{
+        .name = "graah",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/graah/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        })
+    });
+
     const examps = [_]*const *std.Build.Step.Compile{
         &ex_window,
         &ex_triangle,
         &ex_texture,
+        &ex_graah,
     };
 
     const run_step = b.step("run", "run an example");
