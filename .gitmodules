@@ -1,0 +1,3 @@
+[submodule "engine/deps/zigimg"]
+	path = engine/deps/zigimg
+	url = https://github.com/zigimg/zigimg

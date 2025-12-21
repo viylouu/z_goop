@@ -10,6 +10,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    z_goop.addAnonymousImport("zigimg", .{ .root_source_file = b.path("engine/deps/zigimg/zigimg.zig"), });
 
     const graah = b.createModule(.{
         .root_source_file = b.path("engine/graah/root.zig"),

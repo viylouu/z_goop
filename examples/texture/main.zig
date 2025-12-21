@@ -10,8 +10,14 @@ const Game = struct{
     pub var r_impl: *zrend.Impl = undefined;
     pub var tex_pln: zrend.Pipeline = undefined;
     pub var tex: zrend.Texture = undefined;
+    pub var img: zg.data.img.Rgba8 = undefined;
+    pub var arena: std.heap.ArenaAllocator = undefined;
+    pub var alloc: std.mem.Allocator = undefined;
 
     pub fn init() !void {
+        arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+        alloc = arena.allocator();
+
         var tex_vert = try r_impl.make_shader(.{
             .type = .Vertex,
             .source = @embedFile("tex.vert"),
@@ -28,23 +34,12 @@ const Game = struct{
                 .vertex_layout_desc = null,
             });
 
-        const width = 256;
-        const height = 256;
-        var img_data: [width * height * 4]u8 = undefined;
-
-        var seed: u32 = 0x12345678;
-
-        for (0..width*height*4-1) |i| {
-            seed ^= seed << 13;
-            seed ^= seed >> 17;
-            seed ^= seed << 5;
-            img_data[i] = @truncate(seed);
-        }
+        img = try zg.data.img.load_rgba8(alloc, @embedFile("tex.png"));
 
         tex = try r_impl.make_texture(.{
-                .width = @intCast(width),
-                .height = @intCast(height)
-            }, &img_data);
+                .width = @intCast(img.width),
+                .height = @intCast(img.height)
+            }, img.data);
     }
 
     pub fn update(dt: f32) !void { 
@@ -58,9 +53,12 @@ const Game = struct{
 
     pub fn exit() void {
         r_impl.delete_texture(&tex);
+        img.deinit(alloc);
         r_impl.delete_shader(tex_pln.desc.vertex_shader);
         r_impl.delete_shader(tex_pln.desc.fragment_shader);
         r_impl.delete_pipeline(&tex_pln);
+
+        arena.deinit();
     }
 };
 

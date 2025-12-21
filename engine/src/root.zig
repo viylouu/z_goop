@@ -1,6 +1,7 @@
 const std = @import("std");
 pub const plat = @import("plat.zig");
 pub const rend = @import("rend.zig");
+pub const data = @import("data/data.zig");
 
 pub fn run(api: struct{
     plat_impl: *plat.Impl,

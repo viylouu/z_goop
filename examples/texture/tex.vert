@@ -10,5 +10,6 @@ out vec2 uv;
 void main() {
     vec2 pos = verts[gl_VertexID];
     uv = pos + vec2(.5);
+    uv.y = 1-uv.y;
     gl_Position = vec4(pos, 0,1);
 }
