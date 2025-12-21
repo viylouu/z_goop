@@ -1,5 +1,5 @@
 # z_goop
-**z_goop** is a low level interface designed mainly for game developers.  
+**z_goop** is a low level windowing and rendering (and later audio if this gets continued) interface designed mainly for game developers.  
 It stands for:
 - z - zig
 - g - ... literally nothing. this doesent stand for anything. this may be interpreted as "game" though.
