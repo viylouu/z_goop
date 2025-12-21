@@ -38,7 +38,7 @@ const Game = struct{
 
         tex = try r_impl.make_texture(.{
                 .width = @intCast(img.width),
-                .height = @intCast(img.height)
+                .height = @intCast(img.height),
             }, img.data);
     }
 

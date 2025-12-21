@@ -482,11 +482,11 @@ const Impl = struct{
 
         ts.gl.bindTexture(target, tex.id);
 
-        const sampling: c.GLenum = c.GL_NEAREST; // change later to use me_to_gl_texturesampling or smth
+        const sampling = me_to_gl_texturesampling(desc.sampling); // change later to use me_to_gl_texturesampling or smth
         const wrap: c.GLenum = c.GL_REPEAT; // change later to use me_to_gl_texturewrap or smth
 
-        ts.gl.texParameterI(target, c.GL_TEXTURE_MIN_FILTER, sampling);
-        ts.gl.texParameterI(target, c.GL_TEXTURE_MAG_FILTER, sampling);
+        ts.gl.texParameterI(target, c.GL_TEXTURE_MIN_FILTER, @intCast(sampling));
+        ts.gl.texParameterI(target, c.GL_TEXTURE_MAG_FILTER, @intCast(sampling));
         ts.gl.texParameterI(target, c.GL_TEXTURE_WRAP_S, wrap);
         ts.gl.texParameterI(target, c.GL_TEXTURE_WRAP_T, wrap);
 
@@ -660,6 +660,12 @@ const Impl = struct{
                 .format   = c.GL_DEPTH_STENCIL,
                 .type     = c.GL_FLOAT_32_UNSIGNED_INT_24_8_REV,
                 },
+        };
+    }
+    fn me_to_gl_texturesampling(samp: zrend.TextureSampling) c.GLenum {
+        return switch(samp) {
+            .Nearest => c.GL_NEAREST,
+            .Linear  => c.GL_LINEAR,
         };
     }
 
