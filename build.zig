@@ -11,6 +11,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const graah = b.createModule(.{
+        .root_source_file = b.path("engine/graah/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    }); graah.addImport("z_goop", z_goop);
+
     // backends
     // plat
         const bplat_z_glfw = b.createModule(.{
@@ -73,7 +79,8 @@ pub fn build(b: *std.Build) void {
         ex.*.linkLibC();
         //ex.*.addIncludePath(.{ .cwd_relative = "." });
         ex.*.root_module.addImport("z_goop", z_goop);
-            { ex.*.root_module.addImport("z_glfw", bplat_z_glfw);
+            { ex.*.root_module.addImport("graah", graah);
+            } { ex.*.root_module.addImport("z_glfw", bplat_z_glfw);
                 ex.*.linkSystemLibrary("glfw");
                 if (builtin.os.tag == .linux) {
                     ex.*.linkSystemLibrary("X11");
