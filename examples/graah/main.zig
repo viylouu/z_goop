@@ -42,5 +42,6 @@ pub fn exit() void {
 }
 
 pub fn update(dt: f32) !void {
-    _ = dt;
+    gr.clear(0.2, 0.4, 0.3);
+    gr.rect(dt*10, 0, 0.5, 0.5, 1, 0, 0.5, 1);
 }
