@@ -61,9 +61,9 @@ pub fn clear(r: f32, g: f32, b: f32) void {
     state.r.clear(.{ r,g,b,1 });
 }
 
-pub fn rect(x: f32, y: f32, w: f32, h: f32, r: f32, g: f32, b: f32, a: f32) void {
+pub fn rect(desc: struct{ x: f32, y: f32, w: f32, h: f32, col: [4]f32 }) void {
     state.r.bind_pipeline(&state.sh.rect_pln);
-    state.r.update_buffer(&state.sh.rect_ubo, std.mem.sliceAsBytes(&[_]f32{ x,y, w,h, r,g,b,a, }));
+    state.r.update_buffer(&state.sh.rect_ubo, std.mem.sliceAsBytes(&[_]f32{ desc.x,desc.y, desc.w,desc.h, desc.col[0],desc.col[1],desc.col[2],desc.col[3], }));
     state.r.bind_buffer(&state.sh.rect_ubo, 0);
     state.r.draw(6,1);
 }

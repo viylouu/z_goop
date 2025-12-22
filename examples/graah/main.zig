@@ -43,5 +43,12 @@ pub fn exit() void {
 
 pub fn update(dt: f32) !void {
     gr.clear(0.2, 0.4, 0.3);
-    gr.rect(dt*10, 0, 0.5, 0.5, 1, 0, 0.5, 1);
+    gr.rect(.{ 
+        // TODO: add vectors!!!!!!!!! (very important)
+        .x = dt*10, 
+        .y = 0, 
+        .w = 0.5, 
+        .h = 0.5, 
+        .col = .{1, 0, 0.5, 1} 
+    });
 }
