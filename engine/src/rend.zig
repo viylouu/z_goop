@@ -5,6 +5,11 @@ pub const Buffer = struct{
     id: u32,
     desc: BufferDesc,
 };
+pub const BufferDesc = struct{
+    type: BufferType,
+    usage: BufferUsage,
+    size: usize,
+};
 pub const BufferType = enum{
     Vertex,
     Index,
@@ -12,9 +17,9 @@ pub const BufferType = enum{
     Storage,
     Instance,
 };
-pub const BufferDesc = struct{
-    type: BufferType,
-    size: u32,
+pub const BufferUsage = enum{
+    Dynamic,
+    Static,
 };
 
 pub const Texture = struct{
@@ -33,7 +38,7 @@ pub const TextureDesc = struct{
 };
 pub const TextureType = enum{
     Tex2D,
-    Cubemap,
+    //Tex3D,
 };
 pub const TextureUsage = enum{
     Sampler,
@@ -230,6 +235,10 @@ pub const Impl = struct{
         self.delete_texture_fn(self, texture);
     }
 
+    pub fn update_buffer(self: *Impl, buffer: *Buffer, data: []const u8) void {
+        self.update_buffer_fn(self, buffer, data);
+    }
+
     pub fn bind_pipeline(self: *Impl, pipeline: *Pipeline) void {
         self.bind_pipeline_fn(self, pipeline);
     }
@@ -265,6 +274,8 @@ pub const Impl = struct{
 
     make_texture_fn:   *const fn(self: *Impl, desc: TextureDesc, data: ?[]const u8) anyerror !Texture,
     delete_texture_fn: *const fn(self: *Impl, texture: *Texture) void,
+
+    update_buffer_fn: *const fn(self: *Impl, buffer: *Buffer, data: []const u8) void,
 
     bind_pipeline_fn: *const fn(self: *Impl, pipeline: *Pipeline) void,
     bind_buffer_fn:   *const fn(self: *Impl, buffer: *Buffer, slot: u32) void,

@@ -32,6 +32,8 @@ pub var impl = zrend.Impl{
     .make_texture_fn    = Impl.make_texture,
     .delete_texture_fn  = Impl.delete_texture,
 
+    .update_buffer_fn   = Impl.update_buffer,
+
     .bind_pipeline_fn   = Impl.bind_pipeline,
     .bind_buffer_fn     = Impl.bind_buffer,
     .bind_texture_fn    = Impl.bind_texture,
@@ -119,7 +121,13 @@ const Impl = struct{
             index:  c.GLuint,
             buffer: c.GLuint,
             ) callconv(.c) void,
-    
+        bufferSubData:  *const fn (
+            target: c.GLenum,
+            offset: c.GLintptr,
+            size:   c.GLsizeiptr,
+            data:   ?*const anyopaque
+            ) callconv(.c) void,
+
         createShader:  *const fn (
             type: c.GLenum,
             ) callconv(.c) c.GLuint,
@@ -301,6 +309,7 @@ const Impl = struct{
         ts.gl.bindBuffer     = try loadfn(p_impl, "glBindBuffer",     @TypeOf(ts.gl.bindBuffer));
         ts.gl.bufferData     = try loadfn(p_impl, "glBufferData",     @TypeOf(ts.gl.bufferData));
         ts.gl.bindBufferBase = try loadfn(p_impl, "glBindBufferBase", @TypeOf(ts.gl.bindBufferBase));
+        ts.gl.bufferSubData  = try loadfn(p_impl, "glBufferSubData",  @TypeOf(ts.gl.bufferSubData));
 
         ts.gl.createShader  = try loadfn(p_impl, "glCreateShader",  @TypeOf(ts.gl.createShader));
         ts.gl.deleteShader  = try loadfn(p_impl, "glDeleteShader",  @TypeOf(ts.gl.deleteShader));
@@ -363,9 +372,9 @@ const Impl = struct{
         ts.gl.bindBuffer(targ, buf.id);
         ts.gl.bufferData(
             targ,
-            desc.size,
+            @intCast(desc.size),
             if (data) |d| d.ptr else null,
-            c.GL_DYNAMIC_DRAW,
+            me_to_gl_buffer_usage(desc.usage),
             );
         ts.gl.bindBuffer(targ, 0);
 
@@ -478,17 +487,17 @@ const Impl = struct{
         ts.gl.genTextures(1, &tex.id);
         if (tex.id == 0) return err.TextureCreationFail;
 
-        const target: c.GLenum = c.GL_TEXTURE_2D; // change later to use me_to_gl_texturetype or smth
+        const target = me_to_gl_texture_type(desc.type);
 
         ts.gl.bindTexture(target, tex.id);
 
-        const sampling = me_to_gl_texturesampling(desc.sampling); // change later to use me_to_gl_texturesampling or smth
-        const wrap: c.GLenum = c.GL_REPEAT; // change later to use me_to_gl_texturewrap or smth
+        const sampling = me_to_gl_texturesampling(desc.sampling);
+        const wrap = me_to_gl_texture_wrap(desc.wrap);
 
         ts.gl.texParameterI(target, c.GL_TEXTURE_MIN_FILTER, @intCast(sampling));
         ts.gl.texParameterI(target, c.GL_TEXTURE_MAG_FILTER, @intCast(sampling));
-        ts.gl.texParameterI(target, c.GL_TEXTURE_WRAP_S, wrap);
-        ts.gl.texParameterI(target, c.GL_TEXTURE_WRAP_T, wrap);
+        ts.gl.texParameterI(target, c.GL_TEXTURE_WRAP_S, @intCast(wrap));
+        ts.gl.texParameterI(target, c.GL_TEXTURE_WRAP_T, @intCast(wrap));
 
         const fmt = me_to_gl_texture_fmt(desc.fmt);
 
@@ -668,12 +677,41 @@ const Impl = struct{
             .Linear  => c.GL_LINEAR,
         };
     }
+    fn me_to_gl_buffer_usage(use: zrend.BufferUsage) c.GLenum {
+        return switch(use) {
+            .Dynamic => c.GL_DYNAMIC_DRAW,
+            .Static => c.GL_STATIC_DRAW,
+        };
+    }
+    fn me_to_gl_texture_type(tt: zrend.TextureType) c.GLenum {
+        return switch(tt) {
+            .Tex2D => c.GL_TEXTURE_2D,
+            //.Tex3D => c.GL_TEXTURE_3D,
+        };
+    }
+    fn me_to_gl_texture_wrap(wrap: zrend.TextureWrap) c.GLenum {
+        return switch(wrap) {
+            .Repeat => c.GL_REPEAT,
+        };
+    }
 
     const _gl_tex_fmt = struct{
         internal: c.GLint,
         format:   c.GLenum,
         type:     c.GLenum,
     };
+
+    fn update_buffer(self: *zrend.Impl, buffer: *zrend.Buffer, data: []const u8) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        const targ = me_to_gl_buffer_type(buffer.desc.type);
+        ts.gl.bindBuffer(targ, buffer.id);
+        if (data.len > buffer.desc.size) {
+            ts.gl.bufferData(targ, @intCast(data.len), data.ptr, c.GL_DYNAMIC_DRAW);
+            buffer.desc.size = data.len;
+        } else
+            ts.gl.bufferSubData(targ, 0, @intCast(data.len), data.ptr);
+        ts.gl.bindBuffer(targ, 0);
+    }
 
     fn bind_pipeline(self: *zrend.Impl, pipeline: *zrend.Pipeline) void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
