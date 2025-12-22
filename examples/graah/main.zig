@@ -32,15 +32,19 @@ pub fn main() !void {
 
 var state: struct{
     r: *zrend.Impl = undefined,
+    tex: gr.Texture = undefined,
 } = .{};
 
 pub fn init() !void {
     try gr.init(.{
         .rend_impl = state.r,
     });
+
+    state.tex = try gr.make_tex(@embedFile("tex.png"));
 }
 
 pub fn exit() void {
+    state.tex.delete();
     gr.deinit();
 }
 
@@ -50,5 +54,12 @@ pub fn update(dt: f32) !void {
         .pos = Vec2{.x=dt*10, .y=0},
         .size = Vec2{.x=0.5, .y=0.5}, 
         .col = Vec4{.x=1, .y=0, .z=0.5, .w=1} 
+    });
+
+    gr.tex(.{
+        .pos = Vec2{.x=-0.5,.y=-0.5},
+        .size = Vec2{.x=0.25, .y=0.25},
+        .col = Vec4{.x=0,.y=0,.z=1,.w=1},
+        .tex = &state.tex,
     });
 }
