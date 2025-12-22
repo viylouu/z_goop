@@ -1,6 +1,10 @@
 const std = @import("std");
 const zg = @import("z_goop");
 const zrend = zg.rend;
+const zmath = zg.math;
+const Vec2 = zmath.Vec2;
+const Vec3 = zmath.Vec3;
+const Vec4 = zmath.Vec4;
 
 var state: struct{
     arena: std.heap.ArenaAllocator = undefined,
@@ -61,9 +65,9 @@ pub fn clear(r: f32, g: f32, b: f32) void {
     state.r.clear(.{ r,g,b,1 });
 }
 
-pub fn rect(desc: struct{ x: f32, y: f32, w: f32, h: f32, col: [4]f32 }) void {
+pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 }) void {
     state.r.bind_pipeline(&state.sh.rect_pln);
-    state.r.update_buffer(&state.sh.rect_ubo, std.mem.sliceAsBytes(&[_]f32{ desc.x,desc.y, desc.w,desc.h, desc.col[0],desc.col[1],desc.col[2],desc.col[3], }));
+    state.r.update_buffer(&state.sh.rect_ubo, std.mem.sliceAsBytes(&[_]f32{ desc.pos.x,desc.pos.y, desc.size.x,desc.size.y, desc.col.x,desc.col.y,desc.col.z,desc.col.w, }));
     state.r.bind_buffer(&state.sh.rect_ubo, 0);
     state.r.draw(6,1);
 }

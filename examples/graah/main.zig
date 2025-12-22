@@ -2,6 +2,9 @@ const std = @import("std");
 
 const zg = @import("z_goop");
 const zrend = zg.rend;
+const zmath = zg.math;
+const Vec2 = zmath.Vec2;
+const Vec4 = zmath.Vec4;
 
 const gr = @import("graah");
 
@@ -44,11 +47,8 @@ pub fn exit() void {
 pub fn update(dt: f32) !void {
     gr.clear(0.2, 0.4, 0.3);
     gr.rect(.{ 
-        // TODO: add vectors!!!!!!!!! (very important)
-        .x = dt*10, 
-        .y = 0, 
-        .w = 0.5, 
-        .h = 0.5, 
-        .col = .{1, 0, 0.5, 1} 
+        .pos = Vec2{.x=dt*10, .y=0},
+        .size = Vec2{.x=0.5, .y=0.5}, 
+        .col = Vec4{.x=1, .y=0, .z=0.5, .w=1} 
     });
 }
