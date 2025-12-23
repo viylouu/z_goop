@@ -65,7 +65,7 @@ pub fn init(desc: struct{
     state.sh.rect_ubo = try state.r.make_buffer(.{
         .type = .Uniform,
         .usage = .Dynamic,
-        .size = @sizeOf(f32)*2*2 + @sizeOf(f32)*4,
+        .size = @sizeOf(f32)*2*2 + @sizeOf(f32)*4 + @sizeOf(f32)*16*2,
     }, null);
 
     state.sh.tex_vert = try state.r.make_shader(.{
@@ -87,7 +87,7 @@ pub fn init(desc: struct{
     state.sh.tex_ubo = try state.r.make_buffer(.{
         .type = .Uniform,
         .usage = .Dynamic,
-        .size = @sizeOf(f32)*2*2 + @sizeOf(f32)*4,
+        .size = @sizeOf(f32)*2*2 + @sizeOf(f32)*4 + @sizeOf(f32)*16*2,
     }, null);
 }
 
