@@ -19,6 +19,18 @@ pub const Texture = struct{
     }
 };
 
+pub fn make_tex(data: []const u8) !Texture {
+    var t = Texture{ .tex = undefined, .width = undefined, .height = undefined, .img = undefined };
+    t.img = try zg.data.img.load_rgba8(state.alloc, data);
+    t.width = t.img.width;
+    t.height = t.img.height;
+    t.tex = try state.r.make_texture(.{
+        .width = @intCast(t.width),
+        .height = @intCast(t.height),
+    }, t.img.data);
+    return t;
+}
+
 var state: struct{
     arena: std.heap.ArenaAllocator = undefined,
     alloc: std.mem.Allocator       = undefined,
@@ -38,6 +50,35 @@ var state: struct{
     r: *zrend.Impl = undefined,
 } = .{};
 
+// shd = shorthand, not shader
+const shd = struct{
+    pub fn basic_pipeline(vert: [*:0]const u8, frag: [*:0]const u8, o_pln: *zrend.Pipeline, o_vert: *zrend.Shader, o_frag: *zrend.Shader) !void {
+        o_vert.* = try state.r.make_shader(.{
+            .type = .Vertex,
+            .source = vert,
+        });
+
+        o_frag.* = try state.r.make_shader(.{
+            .type = .Fragment,
+            .source = frag,
+        });
+
+        o_pln.* = try state.r.make_pipeline(.{
+            .vertex_shader = o_vert,
+            .fragment_shader = o_frag,
+            .vertex_layout_desc = null,
+        });
+    }
+
+    pub fn basic_ubo() !zrend.Buffer {
+        return try state.r.make_buffer(.{
+            .type = .Uniform,
+            .usage = .Dynamic,
+            .size = @sizeOf(f32), // doesent matter the size, itll resize itself on update, just cant be 0
+        }, null);
+    }
+};
+
 pub fn init(desc: struct{ 
     rend_impl: *zrend.Impl 
 }) !void {
@@ -46,49 +87,13 @@ pub fn init(desc: struct{
 
     state.r = desc.rend_impl;
 
-    state.sh.rect_vert = try state.r.make_shader(.{
-        .type = .Vertex,
-        .source = @embedFile("shaders/rect.vert"),
-    });
+    try shd.basic_pipeline(@embedFile("shaders/rect.vert"), @embedFile("shaders/rect.frag"), 
+        &state.sh.rect_pln, &state.sh.rect_vert, &state.sh.rect_frag);
+    state.sh.rect_ubo = try shd.basic_ubo();
 
-    state.sh.rect_frag = try state.r.make_shader(.{
-        .type = .Fragment,
-        .source = @embedFile("shaders/rect.frag"),
-    });
-
-    state.sh.rect_pln = try state.r.make_pipeline(.{
-        .vertex_shader = &state.sh.rect_vert,
-        .fragment_shader = &state.sh.rect_frag,
-        .vertex_layout_desc = null,
-    });
-
-    state.sh.rect_ubo = try state.r.make_buffer(.{
-        .type = .Uniform,
-        .usage = .Dynamic,
-        .size = @sizeOf(f32)*2*2 + @sizeOf(f32)*4 + @sizeOf(f32)*16*2,
-    }, null);
-
-    state.sh.tex_vert = try state.r.make_shader(.{
-        .type = .Vertex,
-        .source = @embedFile("shaders/tex.vert"),
-    });
-
-    state.sh.tex_frag = try state.r.make_shader(.{
-        .type = .Fragment,
-        .source = @embedFile("shaders/tex.frag"),
-    });
-
-    state.sh.tex_pln = try state.r.make_pipeline(.{
-        .vertex_shader = &state.sh.tex_vert,
-        .fragment_shader = &state.sh.tex_frag,
-        .vertex_layout_desc = null,
-    });
-
-    state.sh.tex_ubo = try state.r.make_buffer(.{
-        .type = .Uniform,
-        .usage = .Dynamic,
-        .size = @sizeOf(f32)*2*2 + @sizeOf(f32)*4 + @sizeOf(f32)*16*2,
-    }, null);
+    try shd.basic_pipeline(@embedFile("shaders/tex.vert"), @embedFile("shaders/tex.frag"), 
+        &state.sh.tex_pln, &state.sh.tex_vert, &state.sh.tex_frag);
+    state.sh.tex_ubo = try shd.basic_ubo();
 }
 
 pub fn deinit() void {
@@ -120,18 +125,6 @@ pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, transf: Mat4 = Mat4.
     } ++ desc.transf.data ++ proj.data));
     state.r.bind_buffer(&state.sh.rect_ubo, 0);
     state.r.draw(6,1);
-}
-
-pub fn make_tex(data: []const u8) !Texture {
-    var t = Texture{ .tex = undefined, .width = undefined, .height = undefined, .img = undefined };
-    t.img = try zg.data.img.load_rgba8(state.alloc, data);
-    t.width = t.img.width;
-    t.height = t.img.height;
-    t.tex = try state.r.make_texture(.{
-        .width = @intCast(t.width),
-        .height = @intCast(t.height),
-    }, t.img.data);
-    return t;
 }
 
 pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, tex: *Texture, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, }) void {
