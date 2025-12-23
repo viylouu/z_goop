@@ -256,6 +256,9 @@ pub const Impl = struct{
     act: *anyopaque,
     name: []const u8,
 
+    width: u32,
+    height: u32,
+
     make_fn:   *const fn(self: *Impl, p_impl: *plat.Impl) anyerror !void,
     delete_fn: *const fn(self: *Impl) void,
 

@@ -5,6 +5,7 @@ const zmath = zg.math;
 const Vec2 = zmath.Vec2;
 const Vec3 = zmath.Vec3;
 const Vec4 = zmath.Vec4;
+const Mat4 = zmath.Mat4;
 
 pub const Texture = struct{
     tex: zrend.Texture,
@@ -109,9 +110,14 @@ pub fn clear(r: f32, g: f32, b: f32) void {
     state.r.clear(.{ r,g,b,1 });
 }
 
-pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 }) void {
+pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, }) void {
+    const proj = desc.proj orelse Mat4.ortho(0, @floatFromInt(state.r.width), @floatFromInt(state.r.height), 0, 0,1);
     state.r.bind_pipeline(&state.sh.rect_pln);
-    state.r.update_buffer(&state.sh.rect_ubo, std.mem.sliceAsBytes(&[_]f32{ desc.pos.x,desc.pos.y, desc.size.x,desc.size.y, desc.col.x,desc.col.y,desc.col.z,desc.col.w, }));
+    state.r.update_buffer(&state.sh.rect_ubo, std.mem.sliceAsBytes(&[_]f32{ 
+        desc.pos.x,desc.pos.y, 
+        desc.size.x,desc.size.y, 
+        desc.col.x,desc.col.y,desc.col.z,desc.col.w, 
+    } ++ desc.transf.data ++ proj.data));
     state.r.bind_buffer(&state.sh.rect_ubo, 0);
     state.r.draw(6,1);
 }
@@ -128,9 +134,14 @@ pub fn make_tex(data: []const u8) !Texture {
     return t;
 }
 
-pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, tex: *Texture }) void {
+pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, tex: *Texture, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, }) void {
+    const proj = desc.proj orelse Mat4.ortho(0, @floatFromInt(state.r.width), @floatFromInt(state.r.height), 0, 0,1);
     state.r.bind_pipeline(&state.sh.tex_pln);
-    state.r.update_buffer(&state.sh.tex_ubo, std.mem.sliceAsBytes(&[_]f32{ desc.pos.x,desc.pos.y, desc.size.x,desc.size.y, desc.col.x,desc.col.y,desc.col.z,desc.col.w, }));
+    state.r.update_buffer(&state.sh.tex_ubo, std.mem.sliceAsBytes(&[_]f32{ 
+        desc.pos.x,desc.pos.y, 
+        desc.size.x,desc.size.y, 
+        desc.col.x,desc.col.y,desc.col.z,desc.col.w, 
+    } ++ desc.transf.data ++ proj.data));
     state.r.bind_buffer(&state.sh.tex_ubo, 0);
     state.r.bind_texture(&desc.tex.tex, 0,0);
     state.r.draw(6,1);

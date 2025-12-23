@@ -9,13 +9,15 @@ layout(std140, binding = 0) uniform Rubo {
     vec2 pos;
     vec2 size;
     vec4 col;
+    mat4 transf;
+
+    mat4 proj;
 } ubo;
 
 out vec4 fCol;
 
 void main() {
     vec2 vert = verts[gl_VertexID];
-    vert.y *= -1; // temp fix, later check if at toplevel, then do this (for framebuffer reasons)
     fCol = ubo.col;
-    gl_Position = vec4(vert * ubo.size + ubo.pos, 0,1);
+    gl_Position = ubo.proj * ubo.transf * vec4(vert * ubo.size + ubo.pos, 0,1);
 }

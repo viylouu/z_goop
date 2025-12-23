@@ -51,14 +51,14 @@ pub fn exit() void {
 pub fn update(dt: f32) !void {
     gr.clear(0.2, 0.4, 0.3);
     gr.rect(.{ 
-        .pos = Vec2{.x=dt*10, .y=0},
-        .size = Vec2{.x=0.5, .y=0.5}, 
+        .pos = Vec2{.x=dt*1000, .y=0},
+        .size = Vec2{.x=500, .y=500}, 
         .col = Vec4{.x=1, .y=0, .z=0.5, .w=1} 
     });
 
     gr.tex(.{
-        .pos = Vec2{.x=-0.5,.y=-0.5},
-        .size = Vec2{.x=0.25, .y=0.25},
+        .pos = Vec2{.x=250,.y=250},
+        .size = Vec2{.x=250, .y=250},
         .col = Vec4{.x=0,.y=0,.z=1,.w=1},
         .tex = &state.tex,
     });
