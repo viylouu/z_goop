@@ -66,6 +66,14 @@ pub const Impl = struct{
         try self.swap_fn(self); 
     }
 
+    // these dont need to be overrided by the platform, these are agnostic
+    pub fn is_key(self: *Impl, key: Key) bool { return self.keys[@intFromEnum(key)] == .Pressed or self.keys[@intFromEnum(key)] == .Held; }
+    pub fn is_key_pressed(self: *Impl, key: Key) bool { return self.keys[@intFromEnum(key)] == .Pressed; }
+    pub fn is_key_released(self: *Impl, key: Key) bool { return self.keys[@intFromEnum(key)] == .Released; }
+    pub fn is_mouse(self: *Impl, key: Key) bool { return self.mousebuts[@intFromEnum(key)] == .Pressed or self.mousebuts[@intFromEnum(key)] == .Held; }
+    pub fn is_mouse_pressed(self: *Impl, key: Key) bool { return self.mousebuts[@intFromEnum(key)] == .Pressed; }
+    pub fn is_mouse_released(self: *Impl, key: Key) bool { return self.mousebuts[@intFromEnum(key)] == .Released; }
+
     pub fn gl_get_fn_addr(self: *Impl, name: [:0]const u8) anyerror !*anyopaque { return try self.gl_get_fn_addr_fn(self, name); }
 
     act: *anyopaque,

@@ -73,11 +73,21 @@ pub fn build(b: *std.Build) void {
         })
     });
 
+    const ex_input = b.addExecutable(.{
+        .name = "input",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/input/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        })
+    });
+
     const examps = [_]*const *std.Build.Step.Compile{
         &ex_window,
         &ex_triangle,
         &ex_texture,
         &ex_graah,
+        &ex_input,
     };
 
     const run_step = b.step("run", "run an example");

@@ -158,10 +158,10 @@ const Impl = struct{
         upk(self, .Right, c.GLFW_KEY_RIGHT);
         upk(self, .Down, c.GLFW_KEY_DOWN);
 
-        for (@intFromEnum(zplat.Key.A)..@intFromEnum(zplat.Key.Z)) |k| upk(self, @enumFromInt(k), @as(c_int, @intCast(k))-c.GLFW_KEY_A);
-        for (@intFromEnum(zplat.Key.K1)..@intFromEnum(zplat.Key.K9)) |k| upk(self, @enumFromInt(k), @as(c_int, @intCast(k))-c.GLFW_KEY_1);
+        for (@intFromEnum(zplat.Key.A)..@intFromEnum(zplat.Key.Z)) |k| upk(self, @enumFromInt(k), @as(c_int, @intCast(k-@intFromEnum(zplat.Key.A)))+c.GLFW_KEY_A);
+        for (@intFromEnum(zplat.Key.K1)..@intFromEnum(zplat.Key.K9)) |k| upk(self, @enumFromInt(k), @as(c_int, @intCast(k-@intFromEnum(zplat.Key.K1)))+c.GLFW_KEY_1);
             upk(self, .K0, c.GLFW_KEY_0);
-        for (@intFromEnum(zplat.Key.F1)..@intFromEnum(zplat.Key.F12)) |k| upk(self, @enumFromInt(k), @as(c_int, @intCast(k))-c.GLFW_KEY_F1);
+        for (@intFromEnum(zplat.Key.F1)..@intFromEnum(zplat.Key.F12)) |k| upk(self, @enumFromInt(k), @as(c_int, @intCast(k-@intFromEnum(zplat.Key.F1)))+c.GLFW_KEY_F1);
 
         upm(self, .Left, c.GLFW_MOUSE_BUTTON_LEFT);
         upm(self, .Right, c.GLFW_MOUSE_BUTTON_RIGHT);
