@@ -68,6 +68,6 @@ pub fn update(dt: f32) !void {
     });
 
     gr.fb(.{
-        
+        .in = &state.fb,
     });
 }

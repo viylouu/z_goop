@@ -51,17 +51,17 @@ pub fn make_fb(width: u32, height: u32) !Framebuffer {
         .width = width,
         .height = height,
         .usage = .Both,
-    });
+    }, null);
 
     frb.tex[1] = try state.r.make_texture(.{
         .width = width,
         .height = height,
         .usage = .Target,
-        .format = .Depth24,
-    });
+        .fmt = .Depth24,
+    }, null);
 
     frb.fb = try state.r.make_framebuffer(.{
-        .colors = frb.tex[0..0], // what the fuck
+        .colors = &[_]*zrend.Texture{ &frb.tex[0] },
         .depth = &frb.tex[1],
         .width = width,
         .height = height,
@@ -154,7 +154,7 @@ pub fn clear(r: f32, g: f32, b: f32) void {
     state.r.clear(.{ r,g,b,1 });
 }
 
-pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, targ: ?Framebuffer = null }) void {
+pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, targ: ?*Framebuffer = null }) void {
     const proj = desc.proj orelse Mat4.ortho(0, @floatFromInt(state.r.width), @floatFromInt(state.r.height), 0, 0,1);
     state.r.bind_pipeline(&state.sh.rect_pln);
     state.r.update_buffer(&state.sh.rect_ubo, std.mem.sliceAsBytes(&[_]f32{ 
@@ -167,7 +167,7 @@ pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, transf: Mat4 = Mat4.
     state.r.draw(6,1);
 }
 
-pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,.w=1}, sample: ?Vec4 = null, tex: *Texture, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, targ: ?Framebuffer = null }) void {
+pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,.w=1}, sample: ?Vec4 = null, tex: *Texture, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, targ: ?*Framebuffer = null }) void {
     const proj = desc.proj orelse Mat4.ortho(0, @floatFromInt(state.r.width), @floatFromInt(state.r.height), 0, 0,1);
     var samp: Vec4 = undefined;
     if (desc.sample) |s| {
@@ -192,14 +192,26 @@ pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,
 }
 
 pub fn fb(desc: struct{ pos: Vec2 = Vec2{.x=0,.y=0}, size: ?Vec2 = null, col: Vec4 = Vec4{.x=1,.y=1,.z=1,.w=1}, sample: ?Vec4 = null, in: *Framebuffer, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, out: ?Framebuffer = null }) void {
-    tex(.{
-        .pos = desc.pos,
-        .size = desc.size orelse if (desc.out) |o| Vec2{.x=@floatFromInt(o.width), .y=@floatFromInt(o.height)} else Vec2{.x=@floatFromInt(state.r.width), .y=@floatFromInt(state.r.height)}, // shit ass line
-        .col = desc.col,
-        .sample = desc.sample,
-        .tex = desc.in.tex,
-        .transf = desc.transf,
-        .proj = desc.proj,
-        .targ = desc.out,
-        });
+    const proj = desc.proj orelse Mat4.ortho(0, @floatFromInt(state.r.width), @floatFromInt(state.r.height), 0, 0,1);
+    var samp: Vec4 = undefined;
+    if (desc.sample) |s| {
+        samp = Vec4{
+            .x = s.x / @as(f32, @floatFromInt(desc.in.width)),
+            .y = s.y / @as(f32, @floatFromInt(desc.in.height)),
+            .z = s.z / @as(f32, @floatFromInt(desc.in.width)),
+            .w = s.w / @as(f32, @floatFromInt(desc.in.height)),
+            };
+    } else samp = Vec4{.x=0,.y=0,.z=1,.w=1};
+    const size = desc.size orelse if (desc.out) |o| Vec2{.x=@floatFromInt(o.width), .y=@floatFromInt(o.height)} else Vec2{.x=@floatFromInt(state.r.width), .y=@floatFromInt(state.r.height)}; // shit ass line
+    state.r.bind_pipeline(&state.sh.tex_pln);
+    state.r.update_buffer(&state.sh.tex_ubo, std.mem.sliceAsBytes(&[_]f32{ 
+        desc.pos.x,desc.pos.y, 
+        size.x,size.y, 
+        desc.col.x,desc.col.y,desc.col.z,desc.col.w, 
+        samp.x, samp.y, samp.z, samp.w,
+    } ++ desc.transf.data ++ proj.data));
+    state.r.bind_buffer(&state.sh.tex_ubo, 0);
+    state.r.bind_texture(&desc.in.tex[0], 0,0);
+    state.r.bind_framebuffer(if (desc.out) |_| @constCast(&desc.out.?.fb) else null);
+    state.r.draw(6,1);
 }
