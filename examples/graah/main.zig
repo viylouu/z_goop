@@ -33,6 +33,7 @@ pub fn main() !void {
 var state: struct{
     r: *zrend.Impl = undefined,
     tex: gr.Texture = undefined,
+    fb: gr.Framebuffer = undefined,
 } = .{};
 
 pub fn init() !void {
@@ -41,6 +42,8 @@ pub fn init() !void {
     });
 
     state.tex = try gr.make_tex(@embedFile("tex.png"));
+
+    state.fb = try gr.make_fb(320,180);
 }
 
 pub fn exit() void {
@@ -53,7 +56,7 @@ pub fn update(dt: f32) !void {
     gr.rect(.{ 
         .pos = Vec2{.x=dt*1000, .y=0},
         .size = Vec2{.x=500, .y=500}, 
-        .col = Vec4{.x=1, .y=0, .z=0.5, .w=1} 
+        .col = Vec4{.x=1, .y=0, .z=0.5, .w=1},
     });
 
     gr.tex(.{
@@ -61,5 +64,10 @@ pub fn update(dt: f32) !void {
         .size = Vec2{.x=250, .y=250},
         .col = Vec4{.x=0,.y=0,.z=1,.w=1},
         .tex = &state.tex,
+        .targ = &state.fb,
+    });
+
+    gr.fb(.{
+        
     });
 }

@@ -191,10 +191,10 @@ pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,
     state.r.draw(6,1);
 }
 
-pub fn fb(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,.w=1}, sample: ?Vec4 = null, in: *Framebuffer, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, out: ?Framebuffer = null }) void {
+pub fn fb(desc: struct{ pos: Vec2 = Vec2{.x=0,.y=0}, size: ?Vec2 = null, col: Vec4 = Vec4{.x=1,.y=1,.z=1,.w=1}, sample: ?Vec4 = null, in: *Framebuffer, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, out: ?Framebuffer = null }) void {
     tex(.{
         .pos = desc.pos,
-        .size = desc.size,
+        .size = desc.size orelse if (desc.out) |o| Vec2{.x=@floatFromInt(o.width), .y=@floatFromInt(o.height)} else Vec2{.x=@floatFromInt(state.r.width), .y=@floatFromInt(state.r.height)}, // shit ass line
         .col = desc.col,
         .sample = desc.sample,
         .tex = desc.in.tex,
