@@ -43,6 +43,7 @@ pub const TextureType = enum{
 pub const TextureUsage = enum{
     Sampler,
     Target,
+    Both, // maybe rename later if more, prob not tho
 };
 pub const TextureFormat = enum{
     Rgba8,
@@ -181,14 +182,25 @@ pub const Shader = struct{
     id: u32,
     desc: ShaderDesc,
 };
+pub const ShaderDesc = struct{
+    type: ShaderType,
+    source: [*:0]const u8,
+};
 pub const ShaderType = enum{
     Vertex,
     Fragment,
     // more later
 };
-pub const ShaderDesc = struct{
-    type: ShaderType,
-    source: [*:0]const u8,
+
+pub const Framebuffer = struct{
+    id: u32,
+    desc: FramebufferDesc,
+};
+pub const FramebufferDesc = struct{
+    width: u32,
+    height: u32,
+    colors: []const *Texture,
+    depth: ?*Texture = null,
 };
 
 pub const Impl = struct{
@@ -235,6 +247,13 @@ pub const Impl = struct{
         self.delete_texture_fn(self, texture);
     }
 
+    pub fn make_framebuffer(self: *Impl, desc: FramebufferDesc) anyerror !Framebuffer {
+        return try self.make_framebuffer_fn(self, desc);
+    }
+    pub fn delete_framebuffer(self: *Impl, framebuffer: *Framebuffer) void {
+        self.delete_framebuffer_fn(self, framebuffer);
+    }
+
     pub fn update_buffer(self: *Impl, buffer: *Buffer, data: []const u8) void {
         self.update_buffer_fn(self, buffer, data);
     }
@@ -247,6 +266,9 @@ pub const Impl = struct{
     }
     pub fn bind_texture(self: *Impl, texture: *Texture, slot: u32, location: u32) void {
         self.bind_texture_fn(self, texture, slot, location);
+    }
+    pub fn bind_framebuffer(self: *Impl, framebuffer: ?*Framebuffer) void {
+        self.bind_framebuffer_fn(self, framebuffer);
     }
 
     pub fn draw(self: *Impl, vertex_count: u32, instance_count: u32) void {
@@ -278,11 +300,15 @@ pub const Impl = struct{
     make_texture_fn:   *const fn(self: *Impl, desc: TextureDesc, data: ?[]const u8) anyerror !Texture,
     delete_texture_fn: *const fn(self: *Impl, texture: *Texture) void,
 
+    make_framebuffer_fn:   *const fn(self: *Impl, desc: FramebufferDesc) anyerror !Framebuffer,
+    delete_framebuffer_fn: *const fn(self: *Impl, framebuffer: *Framebuffer) void,
+
     update_buffer_fn: *const fn(self: *Impl, buffer: *Buffer, data: []const u8) void,
 
-    bind_pipeline_fn: *const fn(self: *Impl, pipeline: *Pipeline) void,
-    bind_buffer_fn:   *const fn(self: *Impl, buffer: *Buffer, slot: u32) void,
-    bind_texture_fn:  *const fn(self: *Impl, texture: *Texture, slot: u32, location: u32) void,
+    bind_pipeline_fn:    *const fn(self: *Impl, pipeline: *Pipeline) void,
+    bind_buffer_fn:      *const fn(self: *Impl, buffer: *Buffer, slot: u32) void,
+    bind_texture_fn:     *const fn(self: *Impl, texture: *Texture, slot: u32, location: u32) void,
+    bind_framebuffer_fn: *const fn(self: *Impl, framebuffer: ?*Framebuffer) void,
 
     draw_fn: *const fn(self: *Impl, vertex_count: u32, instance_count: u32) void,
 };

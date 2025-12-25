@@ -82,12 +82,22 @@ pub fn build(b: *std.Build) void {
         })
     });
 
+    const ex_framebuffer = b.addExecutable(.{
+        .name = "framebuffer",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/framebuffer/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        })
+    });
+
     const examps = [_]*const *std.Build.Step.Compile{
         &ex_window,
         &ex_triangle,
         &ex_texture,
         &ex_graah,
         &ex_input,
+        &ex_framebuffer,
     };
 
     const run_step = b.step("run", "run an example");

@@ -10,38 +10,42 @@ const c = @cImport({
 
 var back = Impl{ .gl = undefined, .cur_pipe = undefined, .cur_index_buf = null, .dummy_vao = 0, };
 pub var impl = zrend.Impl{
-    .act                = &back,
-    .name               = "gl",
+    .act                    = &back,
+    .name                   = "gl",
 
-    .width              = undefined,
-    .height             = undefined,
+    .width                  = undefined,
+    .height                 = undefined,
 
-    .make_fn            = Impl.make,
-    .delete_fn          = Impl.delete,
+    .make_fn                = Impl.make,
+    .delete_fn              = Impl.delete,
 
-    .resize_fn          = Impl.resize,
+    .resize_fn              = Impl.resize,
 
-    .clear_fn           = Impl.clear,
+    .clear_fn               = Impl.clear,
 
-    .make_buffer_fn     = Impl.make_buffer,
-    .delete_buffer_fn   = Impl.delete_buffer,
+    .make_buffer_fn         = Impl.make_buffer,
+    .delete_buffer_fn       = Impl.delete_buffer,
 
-    .make_pipeline_fn   = Impl.make_pipeline,
-    .delete_pipeline_fn = Impl.delete_pipeline,
+    .make_pipeline_fn       = Impl.make_pipeline,
+    .delete_pipeline_fn     = Impl.delete_pipeline,
 
-    .make_shader_fn     = Impl.make_shader,
-    .delete_shader_fn   = Impl.delete_shader,
+    .make_shader_fn         = Impl.make_shader,
+    .delete_shader_fn       = Impl.delete_shader,
 
-    .make_texture_fn    = Impl.make_texture,
-    .delete_texture_fn  = Impl.delete_texture,
+    .make_texture_fn        = Impl.make_texture,
+    .delete_texture_fn      = Impl.delete_texture,
 
-    .update_buffer_fn   = Impl.update_buffer,
+    .make_framebuffer_fn    = Impl.make_framebuffer,
+    .delete_framebuffer_fn  = Impl.delete_framebuffer,
 
-    .bind_pipeline_fn   = Impl.bind_pipeline,
-    .bind_buffer_fn     = Impl.bind_buffer,
-    .bind_texture_fn    = Impl.bind_texture,
+    .update_buffer_fn       = Impl.update_buffer,
 
-    .draw_fn            = Impl.draw,
+    .bind_pipeline_fn       = Impl.bind_pipeline,
+    .bind_buffer_fn         = Impl.bind_buffer,
+    .bind_texture_fn        = Impl.bind_texture,
+    .bind_framebuffer_fn    = Impl.bind_framebuffer,
+
+    .draw_fn                = Impl.draw,
 };
 
 pub const err = error{
@@ -51,6 +55,7 @@ pub const err = error{
     ShaderCompileFail,
     PipelineLinkFail,
     TextureCreationFail,
+    FramebufferIncomplete,
 };
 
 const Impl = struct{
@@ -264,6 +269,40 @@ const Impl = struct{
             location: c.GLint,
             v0:       c.GLint,
             ) callconv(.c) void,
+    
+        genFramebuffers:        *const fn(
+            n:            c.GLsizei,
+            framebuffers: *c.GLuint,
+            ) callconv(.c) void,
+        deleteFramebuffers:     *const fn(
+            n:            c.GLsizei,
+            framebuffers: *const c.GLuint,
+            ) callconv(.c) void,
+        bindFramebuffer:        *const fn(
+            target:      c.GLenum,
+            framebuffer: c.GLuint,
+            ) callconv(.c) void,
+        framebufferTexture2D:   *const fn(
+            target:     c.GLenum,
+            attachment: c.GLenum,
+            textarget:  c.GLenum,
+            texture:    c.GLuint,
+            level:      c.GLint,
+            ) callconv(.c) void,
+        checkFramebufferStatus: *const fn(
+            target: c.GLenum,
+            ) callconv(.c) c.GLenum,
+
+        drawBuffers: *const fn(
+            n:    c.GLsizei,
+            bufs: *const c.GLenum,
+            ) callconv(.c) void,
+        drawBuffer:  *const fn(
+            buf: c.GLenum,
+            ) callconv(.c) void,
+        readBuffer:  *const fn(
+            buf: c.GLenum,
+            ) callconv(.c) void,
     },
 
     cur_pipe: *zrend.Pipeline,
@@ -351,6 +390,16 @@ const Impl = struct{
         ts.gl.activeTexture  = try loadfn(p_impl, "glActiveTexture",  @TypeOf(ts.gl.activeTexture));
     
         ts.gl.uniform1i = try loadfn(p_impl, "glUniform1i", @TypeOf(ts.gl.uniform1i));
+
+        ts.gl.genFramebuffers        = try loadfn(p_impl, "glGenFramebuffers",        @TypeOf(ts.gl.genFramebuffers));
+        ts.gl.deleteFramebuffers     = try loadfn(p_impl, "glDeleteFramebuffers",     @TypeOf(ts.gl.deleteFramebuffers));
+        ts.gl.bindFramebuffer        = try loadfn(p_impl, "glBindFramebuffer",        @TypeOf(ts.gl.bindFramebuffer));
+        ts.gl.framebufferTexture2D   = try loadfn(p_impl, "glFramebufferTexture2D",   @TypeOf(ts.gl.framebufferTexture2D));
+        ts.gl.checkFramebufferStatus = try loadfn(p_impl, "glCheckFramebufferStatus", @TypeOf(ts.gl.checkFramebufferStatus));
+
+        ts.gl.drawBuffers = try loadfn(p_impl, "glDrawBuffers", @TypeOf(ts.gl.drawBuffers));
+        ts.gl.drawBuffer  = try loadfn(p_impl, "glDrawBuffer",  @TypeOf(ts.gl.drawBuffer));
+        ts.gl.readBuffer  = try loadfn(p_impl, "glReadBuffer",  @TypeOf(ts.gl.readBuffer));
     }
     fn loadfn(p_impl: *zplat.Impl, name: [:0]const u8, comptime T: type) !T {
         return @ptrCast(try p_impl.gl_get_fn_addr(name));
@@ -529,6 +578,64 @@ const Impl = struct{
 
         ts.gl.deleteTextures(1, &texture.id);
         texture.id = 0;
+    }
+
+    fn make_framebuffer(self: *zrend.Impl, desc: zrend.FramebufferDesc) !zrend.Framebuffer {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        var fb = zrend.Framebuffer{ .id = 0, .desc = desc, };
+
+        ts.gl.genFramebuffers(1, &fb.id);
+        ts.gl.bindFramebuffer(c.GL_FRAMEBUFFER, fb.id);
+
+        var drawbufs: [8]u32 = undefined;
+        var drawamt: usize = 0;
+
+        for (desc.colors, 0..) |tex, i| {
+            ts.gl.framebufferTexture2D(
+                c.GL_FRAMEBUFFER,
+                @as(c_uint, @intCast(c.GL_COLOR_ATTACHMENT0)) + @as(c_uint, @intCast(i)),
+                c.GL_TEXTURE_2D,
+                tex.id,
+                0,
+                );
+            drawbufs[drawamt] = @as(u32, @intCast(c.GL_COLOR_ATTACHMENT0)) + @as(u32, @intCast(i));
+            drawamt += 1;
+        }
+
+        if (drawamt > 0) {
+            ts.gl.drawBuffers(@intCast(drawamt), &drawbufs[0]);
+        } else {
+            ts.gl.drawBuffer(c.GL_NONE);
+            ts.gl.readBuffer(c.GL_NONE);
+        }
+
+        if (desc.depth) |depth| {
+            ts.gl.framebufferTexture2D(
+                c.GL_FRAMEBUFFER,
+                c.GL_DEPTH_ATTACHMENT,
+                c.GL_TEXTURE_2D,
+                depth.id,
+                0,
+                );
+        }
+
+        if (ts.gl.checkFramebufferStatus(c.GL_FRAMEBUFFER) != c.GL_FRAMEBUFFER_COMPLETE) {
+            ts.gl.bindFramebuffer(c.GL_FRAMEBUFFER, 0);
+            ts.gl.deleteFramebuffers(1, &fb.id);
+            return err.FramebufferIncomplete;
+        }
+
+        ts.gl.bindFramebuffer(c.GL_FRAMEBUFFER, 0);
+
+        return fb;
+    }
+    fn delete_framebuffer(self: *zrend.Impl, framebuffer: *zrend.Framebuffer) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        
+        std.debug.assert(framebuffer.id != 0);
+
+        ts.gl.deleteFramebuffers(1, &framebuffer.id);
+        framebuffer.id = 0;
     }
 
     fn me_to_gl_cullmode(cull: zrend.CullMode) c.GLenum {
@@ -794,6 +901,17 @@ const Impl = struct{
         ts.gl.activeTexture(@as(c_uint, @intCast(c.GL_TEXTURE0)) + @as(c_uint, @intCast(slot)));
         ts.gl.bindTexture(c.GL_TEXTURE_2D, texture.id); // TODO: change c.GL_TEXTURE_2D to convfmt from tex
         ts.gl.uniform1i(@intCast(location), @intCast(slot));
+    }
+    fn bind_framebuffer(self: *zrend.Impl, framebuffer: ?*zrend.Framebuffer) void {
+        const ts: *Impl = @ptrCast(@alignCast(self.act));
+        
+        if (framebuffer) |fb| {
+            ts.gl.bindFramebuffer(c.GL_FRAMEBUFFER, fb.id);
+            ts.gl.viewport(0,0, @intCast(fb.desc.width), @intCast(fb.desc.height));
+        } else {
+            ts.gl.bindFramebuffer(c.GL_FRAMEBUFFER, 0);
+            ts.gl.viewport(0,0, @intCast(self.width), @intCast(self.height));
+        }
     }
 
     fn draw(self: *zrend.Impl, vertex_count: u32, instance_count: u32) void {
