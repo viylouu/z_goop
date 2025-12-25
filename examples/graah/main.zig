@@ -52,7 +52,8 @@ pub fn exit() void {
 }
 
 pub fn update(dt: f32) !void {
-    gr.clear(0.2, 0.4, 0.3);
+    gr.clear(0.2, 0.4, 0.3, 1, null);
+    gr.clear(0,0,0,0, &state.fb);
     gr.rect(.{ 
         .pos = Vec2{.x=dt*1000, .y=0},
         .size = Vec2{.x=500, .y=500}, 
@@ -60,8 +61,8 @@ pub fn update(dt: f32) !void {
     });
 
     gr.tex(.{
-        .pos = Vec2{.x=250,.y=250},
-        .size = Vec2{.x=250, .y=250},
+        .pos = Vec2{.x=64,.y=64},
+        .size = Vec2{.x=32, .y=32},
         .col = Vec4{.x=0,.y=0,.z=1,.w=1},
         .tex = &state.tex,
         .targ = &state.fb,

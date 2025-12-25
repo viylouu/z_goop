@@ -54,6 +54,8 @@ const Impl = struct{
     fn make(self: *zplat.Impl, r_impl: *zrend.Impl, width: u32, height: u32, title: [:0]const u8) err !void {
         const ts: *Impl = @ptrCast(@alignCast(self.act));
 
+        //c.glfwInitHint(c.GLFW_PLATFORM, c.GLFW_PLATFORM_X11); // for testing because qrenderdoc
+
         if (c.glfwInit() == 0)
             return err.GlfwInitFailure;
 
