@@ -48,6 +48,7 @@ pub fn init() !void {
 
 pub fn exit() void {
     state.tex.delete();
+    state.fb.delete();
     gr.deinit();
 }
 
