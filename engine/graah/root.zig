@@ -38,8 +38,8 @@ pub const Framebuffer = struct{
     tex: [2]zrend.Texture, // 0 is for color, 1 is for depth
 
     pub fn delete(self: *Framebuffer) void {
-        state.r.delete_texture(&tex[0]);
-        state.r.delete_texture(&tex[1]);
+        state.r.delete_texture(&self.tex[0]);
+        state.r.delete_texture(&self.tex[1]);
         state.r.delete_framebuffer(&self.fb);
     }
 };
