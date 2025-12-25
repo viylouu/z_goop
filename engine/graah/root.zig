@@ -127,17 +127,17 @@ pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, transf: Mat4 = Mat4.
     state.r.draw(6,1);
 }
 
-pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, sample: ?Vec4 = null, tex: *Texture, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, }) void {
+pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,.w=1}, sample: ?Vec4 = null, tex: *Texture, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, }) void {
     const proj = desc.proj orelse Mat4.ortho(0, @floatFromInt(state.r.width), @floatFromInt(state.r.height), 0, 0,1);
-    const samp: Vec4 = undefined;
+    var samp: Vec4 = undefined;
     if (desc.sample) |s| {
         samp = Vec4{
-            s.x / @as(f32, @floatFromInt(desc.tex.width)),
-            s.y / @as(f32, @floatFromInt(desc.tex.height)),
-            s.z / @as(f32, @floatFromInt(desc.tex.width)),
-            s.w / @as(f32, @floatFromInt(desc.tex.height)),
+            .x = s.x / @as(f32, @floatFromInt(desc.tex.width)),
+            .y = s.y / @as(f32, @floatFromInt(desc.tex.height)),
+            .z = s.z / @as(f32, @floatFromInt(desc.tex.width)),
+            .w = s.w / @as(f32, @floatFromInt(desc.tex.height)),
             };
-    } else samp = Vec4{0,0,1,1};
+    } else samp = Vec4{.x=0,.y=0,.z=1,.w=1};
     state.r.bind_pipeline(&state.sh.tex_pln);
     state.r.update_buffer(&state.sh.tex_ubo, std.mem.sliceAsBytes(&[_]f32{ 
         desc.pos.x,desc.pos.y, 
