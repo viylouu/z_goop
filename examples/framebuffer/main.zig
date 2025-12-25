@@ -44,7 +44,7 @@ const Game = struct{
         }, null);
 
         fb = try r_impl.make_framebuffer(.{
-            .colors = (&[_]*zrend.Texture{ &fb_tex })[0..],
+            .colors = &[_]*zrend.Texture{ &fb_tex },
             .width = width,
             .height = height,
         });

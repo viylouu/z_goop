@@ -31,6 +31,45 @@ pub fn make_tex(data: []const u8) !Texture {
     return t;
 }
 
+pub const Framebuffer = struct{
+    fb: zrend.Framebuffer,
+    width: u32,
+    height: u32,
+    tex: [2]zrend.Texture, // 0 is for color, 1 is for depth
+
+    pub fn delete(self: *Framebuffer) void {
+        state.r.delete_texture(&tex[0]);
+        state.r.delete_texture(&tex[1]);
+        state.r.delete_framebuffer(&self.fb);
+    }
+};
+
+pub fn make_fb(width: u32, height: u32) !Framebuffer {
+    var frb = Framebuffer{ .fb = undefined, .width = width, .height = height, .tex = undefined };
+    
+    frb.tex[0] = try state.r.make_texture(.{
+        .width = width,
+        .height = height,
+        .usage = .Both,
+    });
+
+    frb.tex[1] = try state.r.make_texture(.{
+        .width = width,
+        .height = height,
+        .usage = .Target,
+        .format = .Depth24,
+    });
+
+    frb.fb = try state.r.make_framebuffer(.{
+        .colors = frb.tex[0..0], // what the fuck
+        .depth = &frb.tex[1],
+        .width = width,
+        .height = height,
+    });
+
+    return frb;
+}
+
 var state: struct{
     arena: std.heap.ArenaAllocator = undefined,
     alloc: std.mem.Allocator       = undefined,
@@ -115,7 +154,7 @@ pub fn clear(r: f32, g: f32, b: f32) void {
     state.r.clear(.{ r,g,b,1 });
 }
 
-pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, }) void {
+pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, targ: ?Framebuffer = null }) void {
     const proj = desc.proj orelse Mat4.ortho(0, @floatFromInt(state.r.width), @floatFromInt(state.r.height), 0, 0,1);
     state.r.bind_pipeline(&state.sh.rect_pln);
     state.r.update_buffer(&state.sh.rect_ubo, std.mem.sliceAsBytes(&[_]f32{ 
@@ -124,10 +163,11 @@ pub fn rect(desc: struct{ pos: Vec2, size: Vec2, col: Vec4, transf: Mat4 = Mat4.
         desc.col.x,desc.col.y,desc.col.z,desc.col.w, 
     } ++ desc.transf.data ++ proj.data));
     state.r.bind_buffer(&state.sh.rect_ubo, 0);
+    state.r.bind_framebuffer(if (desc.targ) |_| @constCast(&desc.targ.?.fb) else null);
     state.r.draw(6,1);
 }
 
-pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,.w=1}, sample: ?Vec4 = null, tex: *Texture, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, }) void {
+pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,.w=1}, sample: ?Vec4 = null, tex: *Texture, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, targ: ?Framebuffer = null }) void {
     const proj = desc.proj orelse Mat4.ortho(0, @floatFromInt(state.r.width), @floatFromInt(state.r.height), 0, 0,1);
     var samp: Vec4 = undefined;
     if (desc.sample) |s| {
@@ -147,5 +187,19 @@ pub fn tex(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,
     } ++ desc.transf.data ++ proj.data));
     state.r.bind_buffer(&state.sh.tex_ubo, 0);
     state.r.bind_texture(&desc.tex.tex, 0,0);
+    state.r.bind_framebuffer(if (desc.targ) |_| @constCast(&desc.targ.?.fb) else null);
     state.r.draw(6,1);
+}
+
+pub fn fb(desc: struct{ pos: Vec2, size: Vec2, col: Vec4 = Vec4{.x=1,.y=1,.z=1,.w=1}, sample: ?Vec4 = null, in: *Framebuffer, transf: Mat4 = Mat4.identity(), proj: ?Mat4 = null, out: ?Framebuffer = null }) void {
+    tex(.{
+        .pos = desc.pos,
+        .size = desc.size,
+        .col = desc.col,
+        .sample = desc.sample,
+        .tex = desc.in.tex,
+        .transf = desc.transf,
+        .proj = desc.proj,
+        .targ = desc.out,
+        });
 }
